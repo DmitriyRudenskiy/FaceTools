@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Группы изображений</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .group-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .group-cover {
+            flex: 1;
+            min-width: 300px;
+        }
+        .group-cover-img {
+            width: 100%;
+            aspect-ratio: 1/1; /* Квадратная форма */
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer;
+        }
+        .group-items {
+            flex: 2;
+            min-width: 500px;
+        }
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .item-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #fff;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+        .item-img {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .item-filename {
+            padding: 8px;
+            font-size: 0.75rem;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background-color: #f8f9fa;
+        }
+        .representative-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #0d6efd;
+            color: white;
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        .group-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .elements-header {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .unrecognized-section {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 40px;
+        }
+        .unrecognized-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .stats-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+        }
+        .modal-img {
+            max-width: 100%;
+            max-height: 80vh;
+        }
+        .file-input-section {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .item-img.error, .group-cover-img.error {
+            background-color: #f0f0f0;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="%23ccc">Изображение не найдено</text></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        /* Плавающий подвал */
+        .floating-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #dee2e6;
+            padding: 15px 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .footer-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .selection-overlay {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 20px;
+            height: 20px;
+            background-color: #0d6efd;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            z-index: 20;
+        }
+        .item-card.selected .selection-overlay {
+            display: flex;
+        }
+        .representative-card .selection-overlay {
+            display: none !important;
+        }
+        .representative-card {
+            opacity: 0.7;
+        }
+        @media (max-width: 992px) {
+            .group-container {
+                flex-direction: column;
+            }
+            .group-cover, .group-items {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">
+                    <i class="bi bi-folder-fill"></i> Группы изображений
+                    <small class="text-muted" id="timestamp"></small>
+                </h1>
+                
+                <!-- Статистика -->
+                <div class="row mb-4" id="stats-section">
+                    <div class="col-md-4">
+                        <div class="card stats-card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-people-fill text-primary"></i> Группы
+                                </h5>
+                                <h2 class="mb-0" id="total-groups">0</h2>
+                                <p class="text-muted mb-0">Всего групп найдено</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stats-card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-person-x-fill text-warning"></i> Без лиц
+                                </h5>
+                                <h2 class="mb-0" id="unrecognized-count">0</h2>
+                                <p class="text-muted mb-0">Изображений без лиц</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stats-card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-clock-fill text-info"></i> Дата анализа
+                                </h5>
+                                <p class="mb-0" id="analysis-date">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Секция загрузки файла -->
+                <div class="file-input-section mb-4" id="file-upload-section">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">
+                                <i class="bi bi-file-earmark-arrow-up"></i> Загрузить файл групп
+                            </h5>
+                            <p class="text-muted">Выберите файл groups.json для отображения данных</p>
+                            <input type="file" class="form-control mb-3" id="fileInput" accept=".json">
+                            <button class="btn btn-primary" onclick="loadDefaultFile()">
+                                <i class="bi bi-file-earmark-text"></i> Попробовать загрузить groups.json
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Основное содержимое -->
+                <div id="content"></div>
+
+                <!-- Секция неопознанных изображений -->
+                <div id="unrecognized-section" class="unrecognized-section d-none">
+                    <h3>
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i> 
+                        Изображения без лиц
+                        <span class="badge bg-warning text-dark" id="unrecognized-badge">0</span>
+                    </h3>
+                    <p class="text-muted">Эти изображения были перемещены в папку "not_find_face"</p>
+                    <div id="unrecognized-images" class="unrecognized-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Плавающий подвал -->
+    <div class="floating-footer" id="floating-footer">
+        <div class="container-fluid">
+            <div class="footer-content">
+                <button class="btn btn-outline-primary" onclick="toggleSelectionMode()">
+                    <i class="bi bi-check2-square"></i> Выбрать
+                </button>
+                <select class="form-select" id="group-select" style="width: 200px; display: none;">
+                    <option value="">Выберите группу...</option>
+                </select>
+                <button class="btn btn-success" id="move-button" style="display: none;" onclick="moveSelectedImages()">
+                    <i class="bi bi-arrow-right-circle"></i> Переместить
+                </button>
+                <button class="btn btn-secondary" id="cancel-button" style="display: none;" onclick="cancelSelection()">
+                    <i class="bi bi-x-circle"></i> Отмена
+                </button>
+                <span class="badge bg-primary" id="selected-count" style="display: none;">Выбрано: 0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal для увеличенного изображения -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalLabel">Просмотр изображения</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modal-image" class="modal-img" src="" alt="Увеличенное изображение">
+                    <p class="mt-2 fw-bold" id="modal-filename"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Глобальные переменные
+        let currentData = null;
+        let selectedImages = new Set();
+        let isSelectionMode = false;
+
+        // Функция для загрузки файла по умолчанию
+        async function loadDefaultFile() {
+            try {
+                showLoading();
+                const response = await fetch('groups.json');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                currentData = data;
+                displayGroups(data);
+                hideFileUploadSection();
+            } catch (error) {
+                console.error('Ошибка загрузки файла по умолчанию:', error);
+                showError(`Не удалось загрузить файл groups.json: ${error.message}`);
+            }
+        }
+
+        // Функция для загрузки файла через input
+        function loadFileFromInput() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                showLoading();
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        currentData = data;
+                        displayGroups(data);
+                        hideFileUploadSection();
+                    } catch (error) {
+                        console.error('Ошибка парсинга JSON:', error);
+                        showError(`Ошибка парсинга JSON файла: ${error.message}`);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showError('Ошибка чтения файла');
+                };
+                
+                reader.readAsText(file, 'UTF-8');
+            }
+        }
+
+// Функция для отображения групп
+function displayGroups(data) {
+    // Обновление статистики
+    document.getElementById('timestamp').textContent = `Анализ от ${new Date(data.timestamp).toLocaleString('ru-RU')}`;
+    document.getElementById('total-groups').textContent = data.total_groups;
+    // Предполагаем, что в JSON поле называется 'unrecognized' или 'unrecognized_images'
+    // Адаптируйте это имя в зависимости от структуры вашего JSON
+    const unrecognizedCount = data.unrecognized ? data.unrecognized.length : (data.unrecognized_images ? data.unrecognized_images.length : (data.unrecognized_count || 0));
+    document.getElementById('unrecognized-count').textContent = unrecognizedCount;
+
+    const content = document.getElementById('content');
+    let groupsHtml = '';
+
+    // Базовый путь к изображениям - адаптируйте при необходимости
+    const basePath = "./ready/";
+
+    data.groups.forEach((group, index) => {
+        try {
+            // --- Адаптация под текущую структуру JSON ---
+            // Предполагаем, что пути строятся как basePath + имя_файла
+            const imageFullPaths = (group.images || []).map(filename => `${basePath}${filename}`);
+
+            // Определяем представителя
+            let representativeImage = '';
+            let representativeFilename = '';
+            let representativeIndex = -1;
+
+            if (group.representative) {
+                representativeFilename = group.representative;
+                // Ищем индекс представителя в списке изображений группы
+                representativeIndex = (group.images || []).findIndex(name => name === group.representative);
+                
+                if (representativeIndex >= 0 && representativeIndex < imageFullPaths.length) {
+                    // Если представитель найден, используем сгенерированный путь
+                    representativeImage = imageFullPaths[representativeIndex];
+                } else {
+                    // Если представитель не найден в списке images (редкий случай), используем первый
+                    console.warn(`Представитель '${group.representative}' не найден в списке images для группы ${group.id}. Используется первое изображение.`);
+                    representativeIndex = 0;
+                    representativeImage = imageFullPaths[0] || '';
+                    representativeFilename = (group.images && group.images[0]) || 'unknown.jpg';
+                }
+            } else {
+                // Если поле 'representative' отсутствует, используем первое изображение
+                console.warn(`Поле 'representative' отсутствует для группы ${group.id}. Используется первое изображение.`);
+                representativeIndex = 0;
+                representativeImage = imageFullPaths[0] || '';
+                representativeFilename = (group.images && group.images[0]) || 'unknown.jpg';
+            }
+
+            // --- Генерация HTML ---
+            groupsHtml += `<div class="group-container">
+                <!-- Обложка группы (1/3 экрана) -->
+                <div class="group-cover">
+                    <div class="position-relative">
+                        <img src="${representativeImage}"
+                             class="group-cover-img"
+                             alt="Обложка группы: ${representativeFilename}"
+                             onclick="showImage('${representativeImage}', '${representativeFilename}')"
+                             onerror="this.classList.add('error')">
+                        <span class="representative-badge">Представитель</span>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <h5>Группа #${group.id}</h5>
+                        <p class="text-muted mb-1">${group.size} изображений</p>
+                        <p class="small text-muted mb-0">${representativeFilename}</p>
+                    </div>
+                </div>
+                <!-- Элементы группы (2/3 экрана) -->
+                <div class="group-items">
+                    <div class="elements-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0"><i class="bi bi-images"></i> Элементы группы
+                                <span class="badge bg-primary ms-2">${group.size}</span>
+                            </h4>
+                            <small class="text-muted">Представлена: ${representativeFilename}</small>
+                        </div>
+                    </div>
+                    <div class="items-grid">
+                        ${(group.images || []).map((imageName, imgIndex) => {
+                            const imagePath = imageFullPaths[imgIndex] || `${basePath}${imageName}`;
+                            const isRepresentative = imgIndex === representativeIndex; // Сравниваем по индексу
+                            const cardClass = isRepresentative ? 'item-card representative-card' : 'item-card';
+                            const dataAttributes = `data-group-id="${group.id}" data-image-path="${imagePath}" data-index="${imgIndex}"`;
+                            return `<div class="${cardClass}" ${dataAttributes}>
+                                        <div class="position-relative">
+                                            <img src="${imagePath}"
+                                                 class="item-img"
+                                                 alt="${imageName}"
+                                                 onclick="handleImageClick(this)"
+                                                 onerror="this.classList.add('error')">
+                                            ${isRepresentative ? '<span class="representative-badge">★</span>' : ''}
+                                            <div class="selection-overlay"><i class="bi bi-check"></i></div>
+                                        </div>
+                                        <div class="item-filename" title="${imageName}">${imageName}</div>
+                                    </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            </div><hr class="my-5">`;
+        } catch (error) {
+            console.error(`Ошибка при обработке группы ${group.id || index}:`, error);
+            groupsHtml += `<div class="alert alert-danger">Ошибка при отображении группы ${group.id || index}</div>`;
+        }
+    });
+
+    content.innerHTML = groupsHtml;
+
+    // Отображение неопознанных изображений
+    // Предполагаем, что они находятся в data.unrecognized или data.unrecognized_images
+    const unrecognizedData = data.unrecognized || data.unrecognized_images || [];
+    if (unrecognizedData.length > 0) {
+        const unrecognizedSection = document.getElementById('unrecognized-section');
+        if (unrecognizedSection) {
+            let unrecognizedHtml = '<h3><i class="bi bi-image"></i> Неопознанные изображения</h3><div class="items-grid">';
+            
+            unrecognizedData.forEach((item, index) => {
+                // Адаптируем в зависимости от структуры unrecognized
+                // Может быть просто массив имен файлов или массив объектов
+                let filename, fullPath;
+                if (typeof item === 'string') {
+                    // Если это просто имя файла
+                    filename = item;
+                    fullPath = `${basePath}${item}`;
+                } else if (item.filename) {
+                    // Если это объект с полем filename
+                    filename = item.filename;
+                    fullPath = item.full_path || `${basePath}${item.filename}`;
+                } else {
+                    // Неизвестная структура
+                    console.warn('Неизвестная структура элемента в unrecognized:', item);
+                    return; // Пропустить этот элемент
+                }
+
+                unrecognizedHtml += `
+                <div class="item-card" data-image-path="${fullPath}" data-index="${index}">
+                    <div class="position-relative">
+                        <img src="${fullPath}" class="item-img" alt="${filename}" onclick="handleImageClick(this)" onerror="this.classList.add('error')">
+                        <div class="selection-overlay"><i class="bi bi-check"></i></div>
+                    </div>
+                    <div class="item-filename" title="${filename}">${filename}</div>
+                </div>`;
+            });
+            
+            unrecognizedHtml += '</div>';
+            unrecognizedSection.innerHTML = unrecognizedHtml;
+            unrecognizedSection.classList.remove('d-none');
+        }
+    }
+}
+
+        // Заполнение выпадающего списка групп
+        function populateGroupSelect(groups) {
+            const select = document.getElementById('group-select');
+            select.innerHTML = '<option value="">Выберите группу...</option>';
+            
+            groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = `Группа #${group.id} (${group.size} изображений)`;
+                select.appendChild(option);
+            });
+        }
+
+        // Функция для показа увеличенного изображения
+        function showImage(imagePath, filename) {
+            if (isSelectionMode) return;
+            
+            const modalImage = document.getElementById('modal-image');
+            const modalFilename = document.getElementById('modal-filename');
+            
+            modalImage.src = imagePath;
+            modalFilename.textContent = filename;
+            
+            const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+            modal.show();
+        }
+
+        // Обработка клика по изображению
+        function handleImageClick(element) {
+            if (!isSelectionMode) {
+                // Обычный режим - показ изображения
+                const imagePath = element.closest('.item-card').dataset.imagePath;
+                const filename = element.nextElementSibling ? element.nextElementSibling.title : 'Изображение';
+                showImage(imagePath, filename);
+                return;
+            }
+            
+            // Режим выбора - переключение выделения
+            const card = element.closest('.item-card');
+            const imagePath = card.dataset.imagePath;
+            const groupId = card.dataset.groupId;
+            
+            // Представитель группы нельзя выбирать
+            if (card.classList.contains('representative-card')) {
+                return;
+            }
+            
+            if (selectedImages.has(imagePath)) {
+                selectedImages.delete(imagePath);
+                card.classList.remove('selected');
+            } else {
+                selectedImages.add(imagePath);
+                card.classList.add('selected');
+            }
+            
+            updateSelectedCount();
+        }
+
+        // Переключение режима выбора
+        function toggleSelectionMode() {
+            isSelectionMode = !isSelectionMode;
+            const footer = document.getElementById('floating-footer');
+            const select = document.getElementById('group-select');
+            const moveButton = document.getElementById('move-button');
+            const cancelButton = document.getElementById('cancel-button');
+            const selectedCount = document.getElementById('selected-count');
+            
+            if (isSelectionMode) {
+                footer.style.display = 'block';
+                select.style.display = 'block';
+                moveButton.style.display = 'inline-block';
+                cancelButton.style.display = 'inline-block';
+                selectedCount.style.display = 'inline-block';
+                document.querySelector('button[onclick="toggleSelectionMode()"]').innerHTML = '<i class="bi bi-x-circle"></i> Отменить выбор';
+                updateSelectedCount();
+            } else {
+                cancelSelection();
+            }
+        }
+
+        // Обновление счетчика выбранных изображений
+        function updateSelectedCount() {
+            const selectedCount = document.getElementById('selected-count');
+            selectedCount.textContent = `Выбрано: ${selectedImages.size}`;
+        }
+
+        // Отмена выбора
+        function cancelSelection() {
+            isSelectionMode = false;
+            selectedImages.clear();
+            
+            // Удаление выделения со всех карточек
+            document.querySelectorAll('.item-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Скрытие элементов подвала
+            document.getElementById('group-select').style.display = 'none';
+            document.getElementById('move-button').style.display = 'none';
+            document.getElementById('cancel-button').style.display = 'none';
+            document.getElementById('selected-count').style.display = 'none';
+            document.querySelector('button[onclick="toggleSelectionMode()"]').innerHTML = '<i class="bi bi-check2-square"></i> Выбрать';
+            
+            // Скрытие подвала если не выбрано ни одного изображения
+            if (selectedImages.size === 0) {
+                document.getElementById('floating-footer').style.display = 'none';
+            }
+        }
+
+        // Перемещение выбранных изображений
+        function moveSelectedImages() {
+            const targetGroupId = document.getElementById('group-select').value;
+            
+            if (!targetGroupId) {
+                alert('Пожалуйста, выберите группу для перемещения');
+                return;
+            }
+            
+            if (selectedImages.size === 0) {
+                alert('Пожалуйста, выберите изображения для перемещения');
+                return;
+            }
+            
+            // Здесь должна быть логика перемещения изображений
+            // В реальном приложении это будет отправка запроса на сервер
+            alert(`Выбрано ${selectedImages.size} изображений для перемещения в группу #${targetGroupId}`);
+            
+            // Сброс выбора
+            cancelSelection();
+        }
+
+        // Функции для управления UI
+        function showLoading() {
+            document.getElementById('content').innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2">Загрузка данных...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('content').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Ошибка загрузки данных
+                    </h4>
+                    <p>${message}</p>
+                    <hr>
+                    <p class="mb-0">
+                        <button class="btn btn-outline-primary me-2" onclick="loadDefaultFile()">
+                            <i class="bi bi-arrow-clockwise"></i> Повторить попытку
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()">
+                            <i class="bi bi-folder2-open"></i> Выбрать другой файл
+                        </button>
+                    </p>
+                </div>
+            `;
+        }
+
+        function hideFileUploadSection() {
+            document.getElementById('file-upload-section').classList.add('d-none');
+        }
+
+        // Настройка обработчика для input файла
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('fileInput').addEventListener('change', loadFileFromInput);
+        });
+    </script>
+</body>
+</html>
