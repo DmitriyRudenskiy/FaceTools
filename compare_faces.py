@@ -4,7 +4,8 @@ import argparse
 import face_recognition
 import sys
 import json
-import shutil # Импортируем shutil для копирования файлов
+import shutil  # Импортируем shutil для копирования файлов
+
 
 class FaceComparator:
     def __init__(self):
@@ -46,18 +47,20 @@ class FaceComparator:
         data1 = self.image_encodings.get(index1)
         data2 = self.image_encodings.get(index2)
         if data1 is None or data2 is None or data1['encoding'] is None or data2['encoding'] is None:
-             # Если одно из изображений не имеет кодировки, считаем их несовпадающими
-             return [False, 1.0] # Максимальное расстояние
+            # Если одно из изображений не имеет кодировки, считаем их несовпадающими
+            return [False, 1.0]  # Максимальное расстояние
         encoding1 = data1['encoding']
         encoding2 = data2['encoding']
         results = face_recognition.compare_faces([encoding1], encoding2)
         face_distance = face_recognition.face_distance([encoding1], encoding2)
         return [results[0], face_distance[0]]
 
+
 class SimilarityMatrix:
     def __init__(self, directory_path):
         self.face_comparator = FaceComparator()
         self.face_comparator.load(directory_path)
+
 
 class MatrixPrinter:
     def __init__(self, similarity_matrix_instance):
@@ -74,7 +77,7 @@ class MatrixPrinter:
         start_row = max(0, start_row)
         end_row = min(self.num_images, end_row)
         for i in range(start_row, end_row):
-            for j in range(i, self.num_images): # Заполняем верхний треугольник и диагональ
+            for j in range(i, self.num_images):  # Заполняем верхний треугольник и диагональ
                 if i != j:
                     similarity = self.face_comparator.compare_two_faces(i, j)
                     # Заполняем симметрично
@@ -92,7 +95,7 @@ class MatrixPrinter:
             print("Нет изображений для сравнения.")
             return
         element_width = 7
-        header_items = [f"{i+1:5}" for i in range(self.num_images)]
+        header_items = [f"{i + 1:5}" for i in range(self.num_images)]
         header = "      " + " ".join(header_items)
         print(header)
         for i, row in enumerate(self.similarity_matrix):
@@ -109,38 +112,39 @@ class MatrixPrinter:
                     row_values.append(f"{'  -  ':^{element_width}}")
             print(row_header + " ".join(row_values))
 
+
 class ImageGrouper:
     def __init__(self, similarity_matrix, image_paths):
         self.similarity_matrix = similarity_matrix
         self.image_paths = image_paths
         self.num_images = len(image_paths)
         self.groups = []
-        self.used_indices = set() # Отслеживаем, какие изображения уже добавлены в группы
+        self.used_indices = set()  # Отслеживаем, какие изображения уже добавлены в группы
 
     def calculate_average_distance(self, group_indices):
-       """Вычисляет среднее расстояние для каждого изображения в группе."""
-       distances = []
-       for i in group_indices:
-           total_distance = 0.0
-           count = 0
-           for j in group_indices:
-               if i != j and self.similarity_matrix[i][j] is not None:
-                   distance = self.similarity_matrix[i][j][1]
-                   total_distance += distance
-                   count += 1
-           if count > 0:
-               average_distance = total_distance / count
-           else:
-               average_distance = float('inf') # Или 0, если считать, что одиночка близка к себе?
-           distances.append((average_distance, i))
-       return distances
+        """Вычисляет среднее расстояние для каждого изображения в группе."""
+        distances = []
+        for i in group_indices:
+            total_distance = 0.0
+            count = 0
+            for j in group_indices:
+                if i != j and self.similarity_matrix[i][j] is not None:
+                    distance = self.similarity_matrix[i][j][1]
+                    total_distance += distance
+                    count += 1
+            if count > 0:
+                average_distance = total_distance / count
+            else:
+                average_distance = float('inf')  # Или 0, если считать, что одиночка близка к себе?
+            distances.append((average_distance, i))
+        return distances
 
     def group_images(self):
         """Группирует изображения, обходя матрицу по строкам."""
         start_time = time.time()
         print("Начинаю группировку изображений построчно...")
-        self.groups = [] # Очищаем предыдущие группы
-        self.used_indices = set() # Очищаем использованные индексы
+        self.groups = []  # Очищаем предыдущие группы
+        self.used_indices = set()  # Очищаем использованные индексы
         # Проходим по каждой строке (каждому изображению)
         for i in range(self.num_images):
             # Если изображение уже в группе, пропускаем
@@ -172,25 +176,25 @@ class ImageGrouper:
         # --- Подготовка данных для возврата (с сортировкой) ---
         # Сначала сортируем сами группы по размеру (количество элементов), от большей к меньшей
         # self.groups - это список списков индексов
-        self.groups.sort(key=len, reverse=True) # Сортировка по длине (размеру группы) по убыванию
+        self.groups.sort(key=len, reverse=True)  # Сортировка по длине (размеру группы) по убыванию
         final_groups_data = []
         # Теперь итерируемся по отсортированному списку групп
         for i, group_indices in enumerate(self.groups):
             # Рассчитываем средние расстояния внутри группы
             distances = self.calculate_average_distance(group_indices)
             # Находим изображение с минимальным средним расстоянием (представитель)
-            if distances: # Убедиться, что список не пуст
-                 min_avg_distance_index = min(distances, key=lambda x: x[0])[1]
+            if distances:  # Убедиться, что список не пуст
+                min_avg_distance_index = min(distances, key=lambda x: x[0])[1]
             else:
-                 # Если по какой-то причине расстояний нет, берем первый
-                 min_avg_distance_index = group_indices[0]
+                # Если по какой-то причине расстояний нет, берем первый
+                min_avg_distance_index = group_indices[0]
             representative_image_path = self.image_paths[min_avg_distance_index]
             # Подготавливаем данные для JSON
             group_filenames = [os.path.basename(self.image_paths[idx]) for idx in group_indices]
             group_full_paths = [self.image_paths[idx] for idx in group_indices]
             representative_filename = os.path.basename(representative_image_path)
             group_data = {
-                "id": i + 1, # ID теперь соответствует новому порядку
+                "id": i + 1,  # ID теперь соответствует новому порядку
                 "size": len(group_indices),
                 "representative": representative_filename,
                 "representative_full_path": representative_image_path,
@@ -201,7 +205,7 @@ class ImageGrouper:
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Группировка завершена за {elapsed_time:.2f} секунд")
-        return final_groups_data # Возвращаем подготовленные и отсортированные данные
+        return final_groups_data  # Возвращаем подготовленные и отсортированные данные
 
     def print_groups(self):
         start_time = time.time()
@@ -216,7 +220,8 @@ class ImageGrouper:
             print()
         print(f"Общее время группировки: {grouping_time:.2f} секунд")
         print(f"Найдено групп: {len(groups_data)}")
-        return groups_data # Возвращаем данные
+        return groups_data  # Возвращаем данные
+
 
 # --- Новый класс GroupOrganizer ---
 class GroupOrganizer:
@@ -244,7 +249,7 @@ class GroupOrganizer:
         start_time = time.time()
         total_copied = 0
 
-        for group_data in self.groups_data:
+        for group_data in self.groups_data:  # <-- Исправлено: было self.groups_
             group_id = group_data['id']
             # Используем имя файла представителя (без расширения) как имя каталога
             representative_name = os.path.splitext(group_data['representative'])[0]
@@ -262,7 +267,7 @@ class GroupOrganizer:
                 os.makedirs(group_directory_path, exist_ok=True)
             except OSError as e:
                 print(f"Ошибка создания каталога {group_directory_path}: {e}")
-                continue # Пропускаем эту группу, если не удалось создать каталог
+                continue  # Пропускаем эту группу, если не удалось создать каталог
 
             # Копируем файлы группы в созданный каталог
             copied_count = 0
@@ -286,14 +291,16 @@ class GroupOrganizer:
         print(f"Всего скопировано файлов: {total_copied}")
         print(f"Время на организацию: {elapsed_time:.2f} секунд")
 
-# --- Остальная часть скрипта (main и т.д.) ---
+
 def main():
     parser = argparse.ArgumentParser(description='Анализ и группировка изображений по схожести лиц')
     parser.add_argument('-s', '--src', required=True, help='Путь к директории с изображениями для анализа')
     # Добавляем аргумент для указания выходного файла
-    parser.add_argument('-o', '--output', default='groups.json', help='Путь к выходному JSON файлу (по умолчанию groups.json)')
+    parser.add_argument('-o', '--output', default='groups.json',
+                        help='Путь к выходному JSON файлу (по умолчанию groups.json)')
     # Добавляем аргумент для указания директории для организованных файлов
-    parser.add_argument('-d', '--dest', help='Путь к директории для создания подкаталогов с группами (если не указан, организация файлов выполняться не будет)')
+    parser.add_argument('-d', '--dest',
+                        help='Путь к директории для создания подкаталогов с группами (если не указан, организация файлов выполняться не будет)')
     args = parser.parse_args()
 
     if not os.path.exists(args.src):
@@ -334,21 +341,21 @@ def main():
     matrix_printer = MatrixPrinter(similarity_matrix_instance)
     # Разделение на 4 части и вызов fill() 4 раза
     # num_encodings = len(similarity_matrix_instance.face_comparator.image_encodings)
-    num_encodings = matrix_printer.num_images # Используем правильное количество
+    num_encodings = matrix_printer.num_images  # Используем правильное количество
     if num_encodings == 0:
-         print("Нет изображений для сравнения после загрузки.")
-         return
-    chunk_size = max(1, num_encodings // 4) # Обеспечиваем минимальный размер порции
+        print("Нет изображений для сравнения после загрузки.")
+        return
+    chunk_size = max(1, num_encodings // 4)  # Обеспечиваем минимальный размер порции
     print(f"Размер порции для обработки: {chunk_size}")
     for i in range(4):
         start_row = i * chunk_size
         if i == 3:  # Последняя итерация обрабатывает остаток
             end_row = num_encodings
         else:
-            end_row = min((i + 1) * chunk_size, num_encodings) # Убедиться, что не выходим за границы
+            end_row = min((i + 1) * chunk_size, num_encodings)  # Убедиться, что не выходим за границы
         if start_row >= num_encodings:
-            break # Избегаем лишних итераций, если изображений меньше 4
-        print(f"Обрабатываю порцию {i+1}/4: строки {start_row} до {end_row}")
+            break  # Избегаем лишних итераций, если изображений меньше 4
+        print(f"Обрабатываю порцию {i + 1}/4: строки {start_row} до {end_row}")
         matrix_printer.fill(start_row, end_row)
     # print("Матрица схожести:")
     # matrix_printer.print_matrix()
@@ -393,7 +400,7 @@ def main():
         "total_groups": len(groups_data),
         "unrecognized_count": len(unrecognized_data),
         "groups": groups_data,
-        "unrecognized_images": unrecognized_data # Добавлено
+        "unrecognized_images": unrecognized_data  # Добавлено
     }
     # Сохраняем в файл
     try:
@@ -406,9 +413,10 @@ def main():
         print(f"Найдено групп: {len(groups_data)}")
         print(f"Нераспознанных изображений: {len(unrecognized_data)}")
         if args.dest:
-             print(f"Файлы организованы в директории: {args.dest}")
+            print(f"Файлы организованы в директории: {args.dest}")
     except Exception as e:
         print(f"Ошибка при сохранении файла {args.output}: {e}")
+
 
 if __name__ == "__main__":
     main()
