@@ -169,10 +169,12 @@ class ImageGrouper:
                 self.groups.append(current_group)
             # else:
             #     print(f"Изображение {self.image_paths[i]} не имеет пары.")
+
         # --- Подготовка данных для возврата (с сортировкой) ---
         # Сначала сортируем сами группы по размеру (количество элементов), от большей к меньшей
         # self.groups - это список списков индексов
         self.groups.sort(key=len, reverse=True) # Сортировка по длине (размеру группы) по убыванию
+
         final_groups_data = []
         # Теперь итерируемся по отсортированному списку групп
         for i, group_indices in enumerate(self.groups):
@@ -198,6 +200,7 @@ class ImageGrouper:
                 "images_full_paths": group_full_paths
             }
             final_groups_data.append(group_data)
+
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Группировка завершена за {elapsed_time:.2f} секунд")
@@ -221,11 +224,9 @@ class ImageGrouper:
 # --- Новый класс GroupOrganizer ---
 class GroupOrganizer:
     """Класс для организации файлов по группам в отдельные каталоги."""
-
     def __init__(self, groups_data, destination_directory):
         """
         Инициализирует GroupOrganizer.
-
         Args:
             groups_data (list): Список словарей с данными о группах, полученный от ImageGrouper.
             destination_directory (str): Путь к каталогу, где будут созданы подкаталоги для групп.
@@ -243,7 +244,6 @@ class GroupOrganizer:
         print("=== Начало организации файлов по группам ===")
         start_time = time.time()
         total_copied = 0
-
         for group_data in self.groups_data:  # <-- Исправлено: было self.groups_
             group_id = group_data['id']
             # Используем имя файла представителя (без расширения) как имя каталога
@@ -253,10 +253,8 @@ class GroupOrganizer:
             # Если имя оказалось пустым, используем ID группы
             if not safe_group_name:
                 safe_group_name = f"Group_{group_id}"
-
             group_directory_path = os.path.join(self.destination_directory, safe_group_name)
             print(f"Создаю каталог для группы {group_id}: {group_directory_path}")
-
             # Создаем каталог для группы
             try:
                 os.makedirs(group_directory_path, exist_ok=True)
@@ -277,7 +275,6 @@ class GroupOrganizer:
                     total_copied += 1
                 except Exception as e:
                     print(f"Ошибка копирования файла {full_path} в {group_directory_path}: {e}")
-
             print(f"  Скопировано файлов в группу '{safe_group_name}': {copied_count}")
 
         end_time = time.time()
@@ -293,11 +290,14 @@ def main():
     parser.add_argument('-o', '--output', default='groups.json', help='Путь к выходному JSON файлу (по умолчанию groups.json)')
     # Добавляем аргумент для указания директории для организованных файлов
     parser.add_argument('-d', '--dest', help='Путь к директории для создания подкаталогов с группами (если не указан, организация файлов выполняться не будет)')
+    # Добавляем аргумент для управления отображением матрицы
+    parser.add_argument('-m', '--show-matrix', action='store_true', help='Отображать матрицу схожести в консоли')
     args = parser.parse_args()
 
     if not os.path.exists(args.src):
         print(f"Ошибка: Директория '{args.src}' не существует")
         return
+
     if not os.path.isdir(args.src):
         print(f"Ошибка: '{args.src}' не является директорией")
         return
@@ -312,6 +312,7 @@ def main():
 
     print("=== Начало анализа изображений ===")
     total_start_time = time.time()
+
     similarity_matrix_instance = SimilarityMatrix(args.src)
     # Проверяем, были ли загружены изображения с кодировкой
     num_loaded_images = len(similarity_matrix_instance.face_comparator.image_encodings)
@@ -330,6 +331,7 @@ def main():
         sys.exit(0)
     else:
         print(f"Успешно загружено лиц: {num_loaded_images}")
+
     matrix_printer = MatrixPrinter(similarity_matrix_instance)
     # Разделение на 4 части и вызов fill() 4 раза
     # num_encodings = len(similarity_matrix_instance.face_comparator.image_encodings)
@@ -337,6 +339,7 @@ def main():
     if num_encodings == 0:
          print("Нет изображений для сравнения после загрузки.")
          return
+
     chunk_size = max(1, num_encodings // 4) # Обеспечиваем минимальный размер порции
     print(f"Размер порции для обработки: {chunk_size}")
     for i in range(4):
@@ -349,8 +352,14 @@ def main():
             break # Избегаем лишних итераций, если изображений меньше 4
         print(f"Обрабатываю порцию {i+1}/4: строки {start_row} до {end_row}")
         matrix_printer.fill(start_row, end_row)
-    # print("Матрица схожести:")
-    # matrix_printer.print_matrix()
+
+    # Отображаем матрицу, если указан флаг --show-matrix или -m
+    if args.show_matrix:
+        print("Матрица схожести:")
+        matrix_printer.print_matrix()
+    else:
+        print("Матрица схожести не отображается (используйте -m для отображения).")
+
     # Передаем правильные пути из matrix_printer
     grouper = ImageGrouper(matrix_printer.get_matrix(), matrix_printer.image_paths)
     # Получаем данные групп
@@ -366,10 +375,11 @@ def main():
 
     # Подготавливаем данные для JSON, включая нераспознанные изображения
     total_elapsed_time = time.time() - total_start_time
+
     # Определяем нераспознанные изображения (те, которые не вошли ни в одну группу)
     all_indices = set(range(num_loaded_images))
     used_indices_in_groups = set()
-    for group_data in groups_data: 
+    for group_data in groups_data:
         # Извлекаем индексы из полных путей
         for path in group_data['images_full_paths']:
             # Находим индекс по пути
@@ -386,6 +396,7 @@ def main():
             "filename": filename,
             "full_path": full_path
         })
+
     # Формируем итоговый JSON
     result_json = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -394,6 +405,7 @@ def main():
         "groups": groups_data,
         "unrecognized_images": unrecognized_data # Добавлено
     }
+
     # Сохраняем в файл
     try:
         with open(args.output, 'w', encoding='utf-8') as f:
