@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Группы изображений</title>
+    <title>Группы изображений по резкости</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -205,7 +205,7 @@
         <div class="row">
             <div class="col-12">
                 <h1 class="mb-4">
-                    <i class="bi bi-folder-fill"></i> Группы изображений
+                    <i class="bi bi-folder-fill"></i> Группы изображений по резкости
                     <small class="text-muted" id="timestamp"></small>
                 </h1>
                 <!-- Статистика -->
@@ -225,10 +225,10 @@
                         <div class="card stats-card h-100">
                             <div class="card-body">
                                 <h5 class="card-title">
-                                    <i class="bi bi-person-x-fill text-warning"></i> Без лиц
+                                    <i class="bi bi-camera-fill text-info"></i> Всего изображений
                                 </h5>
-                                <h2 class="mb-0" id="unrecognized-count">0</h2>
-                                <p class="text-muted mb-0">Изображений без лиц</p>
+                                <h2 class="mb-0" id="total-images">0</h2>
+                                <p class="text-muted mb-0">Общее количество изображений</p>
                             </div>
                         </div>
                     </div>
@@ -280,10 +280,10 @@
                 <div id="unrecognized-section" class="unrecognized-section d-none">
                     <h3>
                         <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-                        Изображения без лиц
+                        Неопознанные изображения
                         <span class="badge bg-warning text-dark" id="unrecognized-badge">0</span>
                     </h3>
-                    <p class="text-muted">Эти изображения были перемещены в папку "not_find_face"</p>
+                    <p class="text-muted">Эти изображения не вошли ни в одну группу</p>
                     <div id="unrecognized-images" class="unrecognized-grid"></div>
                 </div>
             </div>
@@ -443,152 +443,134 @@
             }
         }
 
-// Функция для отображения групп
-function displayGroups(data) {
-    // Обновление статистики
-    document.getElementById('timestamp').textContent = `Анализ от ${new Date(data.timestamp).toLocaleString('ru-RU')}`;
-    document.getElementById('total-groups').textContent = data.total_groups;
-    // Предполагаем, что в JSON поле называется 'unrecognized' или 'unrecognized_images'
-    // Адаптируйте это имя в зависимости от структуры вашего JSON
-    const unrecognizedCount = data.unrecognized ? data.unrecognized.length : (data.unrecognized_images ? data.unrecognized_images.length : (data.unrecognized_count || 0));
-    document.getElementById('unrecognized-count').textContent = unrecognizedCount;
-    const content = document.getElementById('content');
-    let groupsHtml = '';
-    // Базовый путь к изображениям - адаптируйте при необходимости
-    const basePath = "./ready/";
-    data.groups.forEach((group, index) => {
-        try {
-            // --- Адаптация под текущую структуру JSON ---
-            // Предполагаем, что пути строятся как basePath + имя_файла
-            const imageFullPaths = (group.images || []).map(filename => `${basePath}${filename}`);
-            // Определяем представителя
-            let representativeImage = '';
-            let representativeFilename = '';
-            let representativeIndex = -1;
-            if (group.representative) {
-                representativeFilename = group.representative;
-                // Ищем индекс представителя в списке изображений группы
-                representativeIndex = (group.images || []).findIndex(name => name === group.representative);
-                if (representativeIndex >= 0 && representativeIndex < imageFullPaths.length) {
-                    // Если представитель найден, используем сгенерированный путь
-                    representativeImage = imageFullPaths[representativeIndex];
-                } else {
-                    // Если представитель не найден в списке images (редкий случай), используем первый
-                    console.warn(`Представитель '${group.representative}' не найден в списке images для группы ${group.id}. Используется первое изображение.`);
-                    representativeIndex = 0;
-                    representativeImage = imageFullPaths[0] || '';
-                    representativeFilename = (group.images && group.images[0]) || 'unknown.jpg';
-                }
+        // Функция для отображения групп
+        function displayGroups(data) {
+            const content = document.getElementById('content');
+            let groupsHtml = '';
+
+            // Обновление статистики
+            document.getElementById('timestamp').textContent = data.timestamp ? `Анализ от ${new Date(data.timestamp).toLocaleString('ru-RU')}` : 'Дата не указана';
+
+            // Определение источника групп
+            let groupsSource = [];
+            let totalImagesCount = 0;
+
+            if (data.sharpness_groups && Array.isArray(data.sharpness_groups)) {
+                groupsSource = data.sharpness_groups;
+                // Подсчет общего количества изображений
+                totalImagesCount = groupsSource.reduce((sum, group) => sum + (group.images ? group.images.length : 0), 0);
+            } else if (data.groups && Array.isArray(data.groups)) {
+                 groupsSource = data.groups;
+                 // Подсчет общего количества изображений
+                 totalImagesCount = groupsSource.reduce((sum, group) => sum + (group.images ? group.images.length : 0), 0);
             } else {
-                // Если поле 'representative' отсутствует, используем первое изображение
-                console.warn(`Поле 'representative' отсутствует для группы ${group.id}. Используется первое изображение.`);
-                representativeIndex = 0;
-                representativeImage = imageFullPaths[0] || '';
-                representativeFilename = (group.images && group.images[0]) || 'unknown.jpg';
+                console.error('Неподдерживаемая структура JSON: нет массива sharpness_groups или groups');
+                showError('Неподдерживаемая структура JSON файла.');
+                return;
             }
-            // --- Генерация HTML ---
-            groupsHtml += `<div class="group-container">
-                <!-- Обложка группы (1/3 экрана) -->
-                <div class="group-cover">
-                    <div class="position-relative">
-                        <img src="${representativeImage}"
-                             class="group-cover-img"
-                             alt="Обложка группы: ${representativeFilename}"
-                             onclick="showImage('${representativeImage}', '${representativeFilename}')"
-                             onerror="this.classList.add('error')">
-                        <span class="representative-badge">Представитель</span>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <h5>Группа #${group.id}</h5>
-                        <p class="text-muted mb-1">${group.size} изображений</p>
-                        <p class="small text-muted mb-0">${representativeFilename}</p>
-                    </div>
-                </div>
-                <!-- Элементы группы (2/3 экрана) -->
-                <div class="group-items">
-                    <div class="elements-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h4 class="mb-0"><i class="bi bi-images"></i> Элементы группы
-                                <span class="badge bg-primary ms-2">${group.size}</span>
-                            </h4>
-                            <small class="text-muted">Представлена: ${representativeFilename}</small>
+
+
+            document.getElementById('total-groups').textContent = groupsSource.length;
+            document.getElementById('total-images').textContent = totalImagesCount;
+
+            groupsSource.forEach((group, index) => {
+                try {
+                    // --- Адаптация под текущую структуру JSON ---
+                    const groupId = group.group_id || group.id || index;
+                    const groupName = group.name || `Группа #${groupId}`;
+                    const groupSize = group.size || (group.images ? group.images.length : 0);
+
+                    // Используем full_path для всех изображений
+                    const imageFullPaths = (group.images || []).map(imgObj => imgObj.full_path || imgObj.filename || 'unknown.jpg');
+
+                    // Определяем представителя (первое изображение)
+                    let representativeImage = '';
+                    let representativeFilename = '';
+                    let representativeIndex = 0; // По умолчанию первый
+
+                    if (group.images && group.images.length > 0) {
+                        const firstImage = group.images[0];
+                        representativeFilename = firstImage.filename || 'unknown.jpg';
+                        representativeImage = firstImage.full_path || representativeFilename;
+                    }
+
+                    // --- Генерация HTML ---
+                    groupsHtml += `<div class="group-container">
+                        <!-- Обложка группы (1/3 экрана) -->
+                        <div class="group-cover">
+                            <div class="position-relative">
+                                <img src="${representativeImage}"
+                                     class="group-cover-img"
+                                     alt="Обложка группы: ${representativeFilename}"
+                                     onclick="showImage('${representativeImage}', '${representativeFilename}')"
+                                     onerror="this.classList.add('error')">
+                                <span class="representative-badge">Представитель</span>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <h5>${groupName}</h5>
+                                <p class="text-muted mb-1">${groupSize} изображений</p>
+                                <p class="small text-muted mb-0">${representativeFilename}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="items-grid">
-                        ${(group.images || []).map((imageName, imgIndex) => {
-                            const imagePath = imageFullPaths[imgIndex] || `${basePath}${imageName}`;
-                            const isRepresentative = imgIndex === representativeIndex; // Сравниваем по индексу
-                            const cardClass = isRepresentative ? 'item-card representative-card' : 'item-card';
-                            const dataAttributes = `data-group-id="${group.id}" data-image-path="${imagePath}" data-index="${imgIndex}"`;
-                            return `<div class="${cardClass}" ${dataAttributes}>
-                                        <div class="position-relative">
-                                            <img src="${imagePath}"
-                                                 class="item-img"
-                                                 alt="${imageName}"
-                                                 onclick="handleImageClick(this)"
-                                                 onerror="this.classList.add('error')">
-                                            ${isRepresentative ? '<span class="representative-badge">★</span>' : ''}
-                                            <div class="selection-overlay"><i class="bi bi-check"></i></div>
-                                        </div>
-                                        <div class="item-filename" title="${imageName}">${imageName}</div>
-                                    </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            </div><hr class="my-5">`;
-        } catch (error) {
-            console.error(`Ошибка при обработке группы ${group.id || index}:`, error);
-            groupsHtml += `<div class="alert alert-danger">Ошибка при отображении группы ${group.id || index}</div>`;
-        }
-    });
-    content.innerHTML = groupsHtml;
-    // Отображение неопознанных изображений
-    // Предполагаем, что они находятся в data.unrecognized или data.unrecognized_images
-    const unrecognizedData = data.unrecognized || data.unrecognized_images || [];
-    if (unrecognizedData.length > 0) {
-        const unrecognizedSection = document.getElementById('unrecognized-section');
-        if (unrecognizedSection) {
-            let unrecognizedHtml = '<h3><i class="bi bi-image"></i> Неопознанные изображения</h3><div class="items-grid">';
-            unrecognizedData.forEach((item, index) => {
-                // Адаптируем в зависимости от структуры unrecognized
-                // Может быть просто массив имен файлов или массив объектов
-                let filename, fullPath;
-                if (typeof item === 'string') {
-                    // Если это просто имя файла
-                    filename = item;
-                    fullPath = `${basePath}${item}`;
-                } else if (item.filename) {
-                    // Если это объект с полем filename
-                    filename = item.filename;
-                    fullPath = item.full_path || `${basePath}${item.filename}`;
-                } else {
-                    // Неизвестная структура
-                    console.warn('Неизвестная структура элемента в unrecognized:', item);
-                    return; // Пропустить этот элемент
+                        <!-- Элементы группы (2/3 экрана) -->
+                        <div class="group-items">
+                            <div class="elements-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h4 class="mb-0"><i class="bi bi-images"></i> Элементы группы
+                                        <span class="badge bg-primary ms-2">${groupSize}</span>
+                                    </h4>
+                                    <small class="text-muted">Представлена: ${representativeFilename}</small>
+                                </div>
+                            </div>
+                            <div class="items-grid">
+                                ${(group.images || []).map((imgObj, imgIndex) => {
+                                    const imageName = imgObj.filename || 'unknown.jpg';
+                                    // Используем full_path как основной путь к изображению
+                                    const imagePath = imgObj.full_path || imageName;
+                                    const isRepresentative = imgIndex === representativeIndex;
+                                    const cardClass = isRepresentative ? 'item-card representative-card' : 'item-card';
+                                    const dataAttributes = `data-group-id="${groupId}" data-image-path="${imagePath}" data-index="${imgIndex}"`;
+                                    // Добавляем информацию о резкости
+                                    const sharpnessInfo = imgObj.sharpness !== undefined ? `<div class="small text-muted p-1">${imgObj.sharpness.toFixed(2)}</div>` : '';
+                                    return `<div class="${cardClass}" ${dataAttributes}>
+                                                <div class="position-relative">
+                                                    <img src="${imagePath}"
+                                                         class="item-img"
+                                                         alt="${imageName}"
+                                                         onclick="handleImageClick(this)"
+                                                         onerror="this.classList.add('error')">
+                                                    ${isRepresentative ? '<span class="representative-badge">★</span>' : ''}
+                                                    <div class="selection-overlay"><i class="bi bi-check"></i></div>
+                                                </div>
+                                                <div class="item-filename" title="${imageName}">${imageName}</div>
+                                                ${sharpnessInfo}
+                                            </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div><hr class="my-5">`;
+                } catch (error) {
+                    console.error(`Ошибка при обработке группы ${group.group_id || group.id || index}:`, error);
+                    groupsHtml += `<div class="alert alert-danger">Ошибка при отображении группы ${group.group_id || group.id || index}</div>`;
                 }
-                unrecognizedHtml += `
-                <div class="item-card" data-image-path="${fullPath}" data-index="${index}">
-                    <div class="position-relative">
-                        <img src="${fullPath}" class="item-img" alt="${filename}" onclick="handleImageClick(this)" onerror="this.classList.add('error')">
-                        <div class="selection-overlay"><i class="bi bi-check"></i></div>
-                    </div>
-                    <div class="item-filename" title="${filename}">${filename}</div>
-                </div>`;
             });
-            unrecognizedHtml += '</div>';
-            unrecognizedSection.innerHTML = unrecognizedHtml;
-            unrecognizedSection.classList.remove('d-none');
+            content.innerHTML = groupsHtml;
+
+            // Скрытие секции неопознанных изображений, так как в этом формате их нет
+            document.getElementById('unrecognized-section').classList.add('d-none');
         }
-    }
-}
+
         // Заполнение выпадающего списка групп
         function populateGroupSelect(groups) {
             const select = document.getElementById('group-select');
             select.innerHTML = '<option value="">Выберите группу...</option>';
             groups.forEach(group => {
+                const groupId = group.group_id || group.id;
+                const groupName = group.name || `Группа #${groupId}`;
+                const groupSize = group.size || (group.images ? group.images.length : 0);
                 const option = document.createElement('option');
-                option.value = group.id;
-                option.textContent = `Группа #${group.id} (${group.size} изображений)`;
+                option.value = groupId;
+                option.textContent = `${groupName} (${groupSize} изображений)`;
                 select.appendChild(option);
             });
         }
@@ -643,6 +625,16 @@ function displayGroups(data) {
                 cancelButton.style.display = 'inline-block';
                 selectedCount.style.display = 'inline-block';
                 document.querySelector('button[onclick="toggleSelectionMode()"]').innerHTML = '<i class="bi bi-x-circle"></i> Отменить выбор';
+                // Заполняем список групп
+                if (currentData) {
+                     let groupsSource = [];
+                     if (currentData.sharpness_groups && Array.isArray(currentData.sharpness_groups)) {
+                         groupsSource = currentData.sharpness_groups;
+                     } else if (currentData.groups && Array.isArray(currentData.groups)) {
+                         groupsSource = currentData.groups;
+                     }
+                     populateGroupSelect(groupsSource);
+                }
                 updateSelectedCount();
             } else {
                 cancelSelection();
