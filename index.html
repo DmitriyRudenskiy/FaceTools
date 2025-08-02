@@ -168,6 +168,36 @@
                 min-width: auto;
             }
         }
+
+        /* Стили для drag & drop */
+        #drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        #drop-zone:hover, #drop-zone.dragover {
+            background-color: #e9f5ff;
+            border-color: #0d6efd;
+        }
+        #drop-zone i {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin-bottom: 15px;
+            display: block;
+        }
+        #drop-zone p {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #666;
+        }
+        #drop-zone.active {
+            background-color: #d1ecf1;
+            border-color: #0dcaf0;
+        }
     </style>
 </head>
 <body>
@@ -178,7 +208,6 @@
                     <i class="bi bi-folder-fill"></i> Группы изображений
                     <small class="text-muted" id="timestamp"></small>
                 </h1>
-                
                 <!-- Статистика -->
                 <div class="row mb-4" id="stats-section">
                     <div class="col-md-4">
@@ -214,30 +243,43 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Секция загрузки файла -->
                 <div class="file-input-section mb-4" id="file-upload-section">
                     <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">
-                                <i class="bi bi-file-earmark-arrow-up"></i> Загрузить файл групп
+                        <div class="card-body">
+                            <h5 class="card-title text-center">
+                                <i class="bi bi-cloud-arrow-up"></i> Загрузить файл групп
                             </h5>
-                            <p class="text-muted">Выберите файл groups.json для отображения данных</p>
-                            <input type="file" class="form-control mb-3" id="fileInput" accept=".json">
-                            <button class="btn btn-primary" onclick="loadDefaultFile()">
-                                <i class="bi bi-file-earmark-text"></i> Попробовать загрузить groups.json
-                            </button>
+                            <p class="text-muted text-center">Перетащите файл <code>groups.json</code> сюда или выберите его</p>
+
+                            <!-- Область перетаскивания -->
+                            <div id="drop-zone" class="mb-3">
+                                <i class="bi bi-cloud-upload"></i>
+                                <p>Перетащите файл сюда</p>
+                                <p class="small text-muted mb-0">или</p>
+                            </div>
+
+                            <!-- Скрытый input для клика -->
+                            <input type="file" class="form-control d-none" id="fileInput" accept=".json">
+                            <div class="d-grid">
+                                <button class="btn btn-outline-primary" id="browseButton">
+                                    <i class="bi bi-folder2-open"></i> Выбрать файл
+                                </button>
+                            </div>
+                            <div class="text-center mt-3">
+                                <button class="btn btn-link btn-sm" onclick="loadDefaultFile()">
+                                    <i class="bi bi-file-earmark-text"></i> Попробовать загрузить groups.json
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-
                 <!-- Основное содержимое -->
                 <div id="content"></div>
-
                 <!-- Секция неопознанных изображений -->
                 <div id="unrecognized-section" class="unrecognized-section d-none">
                     <h3>
-                        <i class="bi bi-exclamation-triangle-fill text-warning"></i> 
+                        <i class="bi bi-exclamation-triangle-fill text-warning"></i>
                         Изображения без лиц
                         <span class="badge bg-warning text-dark" id="unrecognized-badge">0</span>
                     </h3>
@@ -247,7 +289,6 @@
             </div>
         </div>
     </div>
-
     <!-- Плавающий подвал -->
     <div class="floating-footer" id="floating-footer">
         <div class="container-fluid">
@@ -268,7 +309,6 @@
             </div>
         </div>
     </div>
-
     <!-- Modal для увеличенного изображения -->
     <div class="modal fade" id="imageModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -284,26 +324,90 @@
             </div>
         </div>
     </div>
-
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script>
         // Глобальные переменные
         let currentData = null;
         let selectedImages = new Set();
         let isSelectionMode = false;
 
+        // Инициализация Drag & Drop
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('fileInput');
+            const browseButton = document.getElementById('browseButton');
+
+            // Открытие диалога выбора файла при клике на кнопку
+            browseButton.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // Обработка выбора файла через input
+            fileInput.addEventListener('change', loadFileFromInput);
+
+            // Предотвращение поведения по умолчанию для событий перетаскивания
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // Добавление визуальной обратной связи при перетаскивании
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            // Обработка события сброса файла
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight() {
+                dropZone.classList.add('dragover');
+            }
+
+            function unhighlight() {
+                dropZone.classList.remove('dragover');
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+
+            function handleFiles(files) {
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.name.endsWith('.json')) {
+                        // Имитируем выбор файла в input
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+                        // Вызываем обработчик
+                        loadFileFromInput();
+                    } else {
+                        showError('Пожалуйста, выберите файл с расширением .json');
+                    }
+                }
+            }
+        });
+
         // Функция для загрузки файла по умолчанию
         async function loadDefaultFile() {
             try {
                 showLoading();
                 const response = await fetch('groups.json');
-                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const data = await response.json();
                 currentData = data;
                 displayGroups(data);
@@ -318,11 +422,9 @@
         function loadFileFromInput() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
-            
             if (file) {
                 showLoading();
                 const reader = new FileReader();
-                
                 reader.onload = function(e) {
                     try {
                         const data = JSON.parse(e.target.result);
@@ -334,11 +436,9 @@
                         showError(`Ошибка парсинга JSON файла: ${error.message}`);
                     }
                 };
-                
                 reader.onerror = function() {
                     showError('Ошибка чтения файла');
                 };
-                
                 reader.readAsText(file, 'UTF-8');
             }
         }
@@ -352,29 +452,23 @@ function displayGroups(data) {
     // Адаптируйте это имя в зависимости от структуры вашего JSON
     const unrecognizedCount = data.unrecognized ? data.unrecognized.length : (data.unrecognized_images ? data.unrecognized_images.length : (data.unrecognized_count || 0));
     document.getElementById('unrecognized-count').textContent = unrecognizedCount;
-
     const content = document.getElementById('content');
     let groupsHtml = '';
-
     // Базовый путь к изображениям - адаптируйте при необходимости
     const basePath = "./ready/";
-
     data.groups.forEach((group, index) => {
         try {
             // --- Адаптация под текущую структуру JSON ---
             // Предполагаем, что пути строятся как basePath + имя_файла
             const imageFullPaths = (group.images || []).map(filename => `${basePath}${filename}`);
-
             // Определяем представителя
             let representativeImage = '';
             let representativeFilename = '';
             let representativeIndex = -1;
-
             if (group.representative) {
                 representativeFilename = group.representative;
                 // Ищем индекс представителя в списке изображений группы
                 representativeIndex = (group.images || []).findIndex(name => name === group.representative);
-                
                 if (representativeIndex >= 0 && representativeIndex < imageFullPaths.length) {
                     // Если представитель найден, используем сгенерированный путь
                     representativeImage = imageFullPaths[representativeIndex];
@@ -392,7 +486,6 @@ function displayGroups(data) {
                 representativeImage = imageFullPaths[0] || '';
                 representativeFilename = (group.images && group.images[0]) || 'unknown.jpg';
             }
-
             // --- Генерация HTML ---
             groupsHtml += `<div class="group-container">
                 <!-- Обложка группы (1/3 экрана) -->
@@ -448,9 +541,7 @@ function displayGroups(data) {
             groupsHtml += `<div class="alert alert-danger">Ошибка при отображении группы ${group.id || index}</div>`;
         }
     });
-
     content.innerHTML = groupsHtml;
-
     // Отображение неопознанных изображений
     // Предполагаем, что они находятся в data.unrecognized или data.unrecognized_images
     const unrecognizedData = data.unrecognized || data.unrecognized_images || [];
@@ -458,7 +549,6 @@ function displayGroups(data) {
         const unrecognizedSection = document.getElementById('unrecognized-section');
         if (unrecognizedSection) {
             let unrecognizedHtml = '<h3><i class="bi bi-image"></i> Неопознанные изображения</h3><div class="items-grid">';
-            
             unrecognizedData.forEach((item, index) => {
                 // Адаптируем в зависимости от структуры unrecognized
                 // Может быть просто массив имен файлов или массив объектов
@@ -476,7 +566,6 @@ function displayGroups(data) {
                     console.warn('Неизвестная структура элемента в unrecognized:', item);
                     return; // Пропустить этот элемент
                 }
-
                 unrecognizedHtml += `
                 <div class="item-card" data-image-path="${fullPath}" data-index="${index}">
                     <div class="position-relative">
@@ -486,19 +575,16 @@ function displayGroups(data) {
                     <div class="item-filename" title="${filename}">${filename}</div>
                 </div>`;
             });
-            
             unrecognizedHtml += '</div>';
             unrecognizedSection.innerHTML = unrecognizedHtml;
             unrecognizedSection.classList.remove('d-none');
         }
     }
 }
-
         // Заполнение выпадающего списка групп
         function populateGroupSelect(groups) {
             const select = document.getElementById('group-select');
             select.innerHTML = '<option value="">Выберите группу...</option>';
-            
             groups.forEach(group => {
                 const option = document.createElement('option');
                 option.value = group.id;
@@ -506,21 +592,16 @@ function displayGroups(data) {
                 select.appendChild(option);
             });
         }
-
         // Функция для показа увеличенного изображения
         function showImage(imagePath, filename) {
             if (isSelectionMode) return;
-            
             const modalImage = document.getElementById('modal-image');
             const modalFilename = document.getElementById('modal-filename');
-            
             modalImage.src = imagePath;
             modalFilename.textContent = filename;
-            
             const modal = new bootstrap.Modal(document.getElementById('imageModal'));
             modal.show();
         }
-
         // Обработка клика по изображению
         function handleImageClick(element) {
             if (!isSelectionMode) {
@@ -530,17 +611,14 @@ function displayGroups(data) {
                 showImage(imagePath, filename);
                 return;
             }
-            
             // Режим выбора - переключение выделения
             const card = element.closest('.item-card');
             const imagePath = card.dataset.imagePath;
             const groupId = card.dataset.groupId;
-            
             // Представитель группы нельзя выбирать
             if (card.classList.contains('representative-card')) {
                 return;
             }
-            
             if (selectedImages.has(imagePath)) {
                 selectedImages.delete(imagePath);
                 card.classList.remove('selected');
@@ -548,10 +626,8 @@ function displayGroups(data) {
                 selectedImages.add(imagePath);
                 card.classList.add('selected');
             }
-            
             updateSelectedCount();
         }
-
         // Переключение режима выбора
         function toggleSelectionMode() {
             isSelectionMode = !isSelectionMode;
@@ -560,7 +636,6 @@ function displayGroups(data) {
             const moveButton = document.getElementById('move-button');
             const cancelButton = document.getElementById('cancel-button');
             const selectedCount = document.getElementById('selected-count');
-            
             if (isSelectionMode) {
                 footer.style.display = 'block';
                 select.style.display = 'block';
@@ -573,58 +648,47 @@ function displayGroups(data) {
                 cancelSelection();
             }
         }
-
         // Обновление счетчика выбранных изображений
         function updateSelectedCount() {
             const selectedCount = document.getElementById('selected-count');
             selectedCount.textContent = `Выбрано: ${selectedImages.size}`;
         }
-
         // Отмена выбора
         function cancelSelection() {
             isSelectionMode = false;
             selectedImages.clear();
-            
             // Удаление выделения со всех карточек
             document.querySelectorAll('.item-card.selected').forEach(card => {
                 card.classList.remove('selected');
             });
-            
             // Скрытие элементов подвала
             document.getElementById('group-select').style.display = 'none';
             document.getElementById('move-button').style.display = 'none';
             document.getElementById('cancel-button').style.display = 'none';
             document.getElementById('selected-count').style.display = 'none';
             document.querySelector('button[onclick="toggleSelectionMode()"]').innerHTML = '<i class="bi bi-check2-square"></i> Выбрать';
-            
             // Скрытие подвала если не выбрано ни одного изображения
             if (selectedImages.size === 0) {
                 document.getElementById('floating-footer').style.display = 'none';
             }
         }
-
         // Перемещение выбранных изображений
         function moveSelectedImages() {
             const targetGroupId = document.getElementById('group-select').value;
-            
             if (!targetGroupId) {
                 alert('Пожалуйста, выберите группу для перемещения');
                 return;
             }
-            
             if (selectedImages.size === 0) {
                 alert('Пожалуйста, выберите изображения для перемещения');
                 return;
             }
-            
             // Здесь должна быть логика перемещения изображений
             // В реальном приложении это будет отправка запроса на сервер
             alert(`Выбрано ${selectedImages.size} изображений для перемещения в группу #${targetGroupId}`);
-            
             // Сброс выбора
             cancelSelection();
         }
-
         // Функции для управления UI
         function showLoading() {
             document.getElementById('content').innerHTML = `
@@ -636,7 +700,6 @@ function displayGroups(data) {
                 </div>
             `;
         }
-
         function showError(message) {
             document.getElementById('content').innerHTML = `
                 <div class="alert alert-danger" role="alert">
@@ -656,15 +719,9 @@ function displayGroups(data) {
                 </div>
             `;
         }
-
         function hideFileUploadSection() {
             document.getElementById('file-upload-section').classList.add('d-none');
         }
-
-        // Настройка обработчика для input файла
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('fileInput').addEventListener('change', loadFileFromInput);
-        });
     </script>
 </body>
 </html>

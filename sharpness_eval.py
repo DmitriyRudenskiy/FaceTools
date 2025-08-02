@@ -140,6 +140,7 @@ class SharpnessGrouper:
             json_groups.append(json_group)
         return json_groups
 
+
 class ImageProcessor:
     """Класс для обработки изображений в директории"""
 
@@ -155,8 +156,7 @@ class ImageProcessor:
             filepath = os.path.join(self.directory, filename)
 
             if (os.path.isfile(filepath) and
-                filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff'))):
-
+                    filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff'))):
                 sharpness = ImageSharpnessAnalyzer.calculate_sharpness(filepath)
                 width, height, area = ImageSharpnessAnalyzer.get_image_info(filepath)
 
@@ -171,6 +171,7 @@ class ImageProcessor:
     def get_sorted_data(self) -> List[ImageData]:
         """Возвращает отсортированные данные в виде списка ImageData"""
         return self.images_data
+
 
 class ConsoleOutput:
     """Класс для вывода результатов в консоль"""
@@ -196,6 +197,7 @@ class ConsoleOutput:
         for image_data in images_data:
             ConsoleOutput.print_image_data(image_data)
 
+
 class SharpnessEvaluator:
     """Основной класс для оценки резкости изображений"""
 
@@ -204,7 +206,7 @@ class SharpnessEvaluator:
         self.processor = ImageProcessor(directory)
         self.output = ConsoleOutput()
 
-    def run(self, input_json_path: str = None, output_json_path: str = "output_with_sharpness_groups.json") -> None:
+    def run(self, input_json_path: str = None) -> None:
         """Запускает полный процесс оценки резкости"""
         if not os.path.isdir(self.directory):
             print(f"Ошибка: Директория '{self.directory}' не существует.")
@@ -249,13 +251,15 @@ class SharpnessEvaluator:
         # Добавляем данные о группировке по резкости в JSON
         json_output["sharpness_groups"] = grouper.get_groups_for_json(sharpness_groups)
 
-        # Сохраняем обновлённый JSON
+        # --- Сохраняем JSON в ту же директорию, что и изображения ---
+        output_json_path = os.path.join(self.directory, "output_with_sharpness_groups.json")
         try:
             with open(output_json_path, 'w', encoding='utf-8') as f:
                 json.dump(json_output, f, ensure_ascii=False, indent=4)
             print(f"\nРезультаты, включая группы по резкости, сохранены в файл: {output_json_path}")
         except Exception as e:
             print(f"Ошибка при сохранении JSON: {e}")
+
 
 def main():
     """Основная функция"""
