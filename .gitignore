@@ -208,3 +208,4 @@ __marimo__/
 
 # idea folder, uncomment if you don't need it
 .idea
+/model.pt
