@@ -88,7 +88,6 @@
                 </div>
             </div>
         </div>
-
         <div id="imagesContainer" class="hidden">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Изображения</h2>
@@ -97,7 +96,6 @@
             <div id="setsContainer"></div>
         </div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const directoryInput = document.getElementById('directoryInput');
@@ -158,7 +156,6 @@
                     table.className = 'image-table';
 
                     let imageIndex = 0;
-                    let cellNumber = 1;
 
                     // Создаем 4 строки
                     for (let row = 0; row < 4; row++) {
@@ -169,7 +166,25 @@
                             const td = document.createElement('td');
                             td.className = 'image-cell';
 
-                            if (imageIndex < imageSet.length) {
+                            if (row === 0 && col === 0) {
+                                // В первой ячейке показываем "Набор" и номер набора
+                                const numberDiv = document.createElement('div');
+                                numberDiv.className = 'cell-number';
+
+                                const setText = document.createElement('div');
+                                setText.className = 'set-text';
+                                setText.textContent = 'Набор';
+
+                                const setNum = document.createElement('div');
+                                setNum.className = 'set-number';
+                                setNum.textContent = setNumber;
+
+                                numberDiv.appendChild(setText);
+                                numberDiv.appendChild(setNum);
+
+                                td.appendChild(numberDiv);
+                            } else if (imageIndex < imageSet.length) {
+                                // Если есть изображение, показываем его
                                 const img = document.createElement('img');
                                 img.src = URL.createObjectURL(imageSet[imageIndex]);
                                 img.className = 'image-item';
@@ -177,31 +192,24 @@
                                 td.appendChild(img);
                                 imageIndex++;
                             } else {
-                                // Если изображения нет, показываем информацию о наборе или номер ячейки
+                                // Если изображения нет, показываем "Фото" и номер
                                 const numberDiv = document.createElement('div');
                                 numberDiv.className = 'cell-number';
 
-                                if (cellNumber === 1) {
-                                    // В первой ячейке показываем "Набор" и номер набора
-                                    const setText = document.createElement('div');
-                                    setText.className = 'set-text';
-                                    setText.textContent = 'Набор';
+                                const photoText = document.createElement('div');
+                                photoText.className = 'photo-text';
+                                photoText.textContent = 'Фото';
 
-                                    const setNum = document.createElement('div');
-                                    setNum.className = 'set-number';
-                                    setNum.textContent = setNumber;
+                                const photoNum = document.createElement('div');
+                                photoNum.className = 'photo-number';
+                                photoNum.textContent = imageIndex + 1;
 
-                                    numberDiv.appendChild(setText);
-                                    numberDiv.appendChild(setNum);
-                                } else {
-                                    // В остальных пустых ячейках показываем порядковый номер
-                                    numberDiv.textContent = cellNumber;
-                                }
+                                numberDiv.appendChild(photoText);
+                                numberDiv.appendChild(photoNum);
 
                                 td.appendChild(numberDiv);
                             }
 
-                            cellNumber++;
                             tr.appendChild(td);
                         }
 
@@ -247,7 +255,7 @@
                                 const y = row * 256;
                                 ctx.drawImage(images[index], x, y, 256, 256);
                             } else {
-                                // Если изображения нет, рисуем информацию о наборе или номер
+                                // Если изображения нет, рисуем информацию о наборе или "Фото" с номером
                                 const x = col * 256;
                                 const y = row * 256;
                                 ctx.fillStyle = '#f8f9fa';
@@ -256,17 +264,19 @@
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
 
-                                if (index === 0) {
+                                if (row === 0 && col === 0) {
                                     // В первой ячейке показываем "Набор" и номер набора
-                                    ctx.font = 'bold 24px Arial';
+                                    ctx.font = 'bold 20px Arial';
                                     ctx.fillText('Набор', x + 128, y + 100);
                                     ctx.font = 'bold 32px Arial';
                                     ctx.fillText(setNumber.toString(), x + 128, y + 140);
                                 } else {
-                                    // В остальных пустых ячейках показываем порядковый номер
-                                    ctx.font = 'bold 48px Arial';
+                                    // В остальных пустых ячейках показываем "Фото" и номер
+                                    ctx.font = 'bold 20px Arial';
+                                    ctx.fillText('Фото', x + 128, y + 100);
+                                    ctx.font = 'bold 32px Arial';
                                     const number = index + 1;
-                                    ctx.fillText(number.toString(), x + 128, y + 128);
+                                    ctx.fillText(number.toString(), x + 128, y + 140);
                                 }
                             }
                             index++;
