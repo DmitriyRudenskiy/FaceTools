@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выбор директории с изображениями</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .image-table {
+            width: 1024px;
+            height: 1024px;
+            border: 1px solid #ddd;
+            margin: 20px auto;
+            table-layout: fixed;
+        }
+        .image-cell {
+            width: 256px;
+            height: 256px;
+            padding: 0;
+            border: none;
+            position: relative;
+        }
+        .image-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .cell-number {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .cell-number .set-text {
+            font-size: 20px;
+        }
+        .cell-number .set-number {
+            font-size: 32px;
+            margin-top: 5px;
+        }
+        .cell-number .position-number {
+            font-size: 48px;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+        .container-content {
+            max-width: 1200px;
+        }
+        .set-container {
+            margin-bottom: 40px;
+        }
+        .set-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .set-title {
+            margin: 0;
+        }
+        .download-btn {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container container-content mt-5">
+        <div id="directorySelection">
+            <div class="row justify-content-center">
+                <div class="col-md-8 text-center">
+                    <h2 class="mb-4">Выберите директорию с изображениями</h2>
+                    <input type="file" id="directoryInput" class="form-control" webkitdirectory directory multiple>
+                    <p class="text-muted mt-3">Выберите папку, содержащую изображения</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="imagesContainer" class="hidden">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Изображения</h2>
+                <button id="backButton" class="btn btn-secondary">Назад</button>
+            </div>
+            <div id="setsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const directoryInput = document.getElementById('directoryInput');
+            const directorySelection = document.getElementById('directorySelection');
+            const imagesContainer = document.getElementById('imagesContainer');
+            const setsContainer = document.getElementById('setsContainer');
+            const backButton = document.getElementById('backButton');
+
+            directoryInput.addEventListener('change', handleDirectorySelect);
+            backButton.addEventListener('click', showDirectorySelection);
+
+            function handleDirectorySelect(event) {
+                const files = Array.from(event.target.files);
+                const imageFiles = files.filter(file =>
+                    file.type.startsWith('image/')
+                );
+
+                if (imageFiles.length === 0) {
+                    alert('В выбранной директории нет изображений');
+                    return;
+                }
+
+                displayImages(imageFiles);
+                showImagesContainer();
+            }
+
+            function displayImages(imageFiles) {
+                setsContainer.innerHTML = '';
+
+                // Разбиваем на наборы по 15 изображений
+                for (let i = 0; i < imageFiles.length; i += 15) {
+                    const imageSet = imageFiles.slice(i, i + 15);
+                    const setNumber = Math.floor(i / 15) + 1;
+                    const totalSets = Math.ceil(imageFiles.length / 15);
+
+                    const setContainer = document.createElement('div');
+                    setContainer.className = 'set-container';
+
+                    // Создаем заголовок с кнопкой загрузки
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'set-header';
+
+                    const setTitle = document.createElement('h4');
+                    setTitle.textContent = `Набор ${setNumber} из ${totalSets}`;
+                    setTitle.className = 'set-title';
+                    headerDiv.appendChild(setTitle);
+
+                    const downloadButton = document.createElement('button');
+                    downloadButton.textContent = 'Загрузить';
+                    downloadButton.className = 'btn btn-primary download-btn';
+                    downloadButton.addEventListener('click', () => downloadMergedImage(imageSet, setNumber));
+                    headerDiv.appendChild(downloadButton);
+
+                    setContainer.appendChild(headerDiv);
+
+                    // Создаем таблицу 4x4 размером 1024x1024 пикселей
+                    const table = document.createElement('table');
+                    table.className = 'image-table';
+
+                    let imageIndex = 0;
+                    let cellNumber = 1;
+
+                    // Создаем 4 строки
+                    for (let row = 0; row < 4; row++) {
+                        const tr = document.createElement('tr');
+
+                        // Создаем 4 ячейки в каждой строке
+                        for (let col = 0; col < 4; col++) {
+                            const td = document.createElement('td');
+                            td.className = 'image-cell';
+
+                            if (imageIndex < imageSet.length) {
+                                const img = document.createElement('img');
+                                img.src = URL.createObjectURL(imageSet[imageIndex]);
+                                img.className = 'image-item';
+                                img.alt = imageSet[imageIndex].name;
+                                td.appendChild(img);
+                                imageIndex++;
+                            } else {
+                                // Если изображения нет, показываем информацию о наборе или номер ячейки
+                                const numberDiv = document.createElement('div');
+                                numberDiv.className = 'cell-number';
+
+                                if (cellNumber === 1) {
+                                    // В первой ячейке показываем "Набор" и номер набора
+                                    const setText = document.createElement('div');
+                                    setText.className = 'set-text';
+                                    setText.textContent = 'Набор';
+
+                                    const setNum = document.createElement('div');
+                                    setNum.className = 'set-number';
+                                    setNum.textContent = setNumber;
+
+                                    numberDiv.appendChild(setText);
+                                    numberDiv.appendChild(setNum);
+                                } else {
+                                    // В остальных пустых ячейках показываем порядковый номер
+                                    numberDiv.textContent = cellNumber;
+                                }
+
+                                td.appendChild(numberDiv);
+                            }
+
+                            cellNumber++;
+                            tr.appendChild(td);
+                        }
+
+                        table.appendChild(tr);
+                    }
+
+                    setContainer.appendChild(table);
+                    setsContainer.appendChild(setContainer);
+                }
+            }
+
+            function downloadMergedImage(imageSet, setNumber) {
+                // Создаем canvas размером 1024x1024
+                const canvas = document.createElement('canvas');
+                canvas.width = 1024;
+                canvas.height = 1024;
+                const ctx = canvas.getContext('2d');
+
+                // Загружаем все изображения и рисуем их на canvas
+                const promises = [];
+                const images = [];
+
+                for (let i = 0; i < Math.min(15, imageSet.length); i++) {
+                    const img = new Image();
+                    const promise = new Promise((resolve, reject) => {
+                        img.onload = () => {
+                            images[i] = img;
+                            resolve();
+                        };
+                        img.onerror = reject;
+                        img.src = URL.createObjectURL(imageSet[i]);
+                    });
+                    promises.push(promise);
+                }
+
+                Promise.all(promises).then(() => {
+                    // Рисуем изображения на canvas без пробелов
+                    let index = 0;
+                    for (let row = 0; row < 4; row++) {
+                        for (let col = 0; col < 4; col++) {
+                            if (index < images.length) {
+                                const x = col * 256;
+                                const y = row * 256;
+                                ctx.drawImage(images[index], x, y, 256, 256);
+                            } else {
+                                // Если изображения нет, рисуем информацию о наборе или номер
+                                const x = col * 256;
+                                const y = row * 256;
+                                ctx.fillStyle = '#f8f9fa';
+                                ctx.fillRect(x, y, 256, 256);
+                                ctx.fillStyle = '#6c757d';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+
+                                if (index === 0) {
+                                    // В первой ячейке показываем "Набор" и номер набора
+                                    ctx.font = 'bold 24px Arial';
+                                    ctx.fillText('Набор', x + 128, y + 100);
+                                    ctx.font = 'bold 32px Arial';
+                                    ctx.fillText(setNumber.toString(), x + 128, y + 140);
+                                } else {
+                                    // В остальных пустых ячейках показываем порядковый номер
+                                    ctx.font = 'bold 48px Arial';
+                                    const number = index + 1;
+                                    ctx.fillText(number.toString(), x + 128, y + 128);
+                                }
+                            }
+                            index++;
+                        }
+                    }
+
+                    // Создаем ссылку для скачивания
+                    const link = document.createElement('a');
+                    link.download = `merged_set_${setNumber}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }).catch(error => {
+                    console.error('Ошибка при загрузке изображений:', error);
+                    alert('Произошла ошибка при объединении изображений');
+                });
+            }
+
+            function showImagesContainer() {
+                directorySelection.classList.add('hidden');
+                imagesContainer.classList.remove('hidden');
+            }
+
+            function showDirectorySelection() {
+                imagesContainer.classList.add('hidden');
+                directorySelection.classList.remove('hidden');
+                directoryInput.value = '';
+                setsContainer.innerHTML = '';
+            }
+        });
+    </script>
+</body>
+</html>
