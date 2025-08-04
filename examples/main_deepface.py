@@ -41,3 +41,18 @@ if __name__ == "__main__":
         matrix = CompareMatrix(len(comparator.storage))
         matrix.fill(comparator)
         matrix.display()
+
+        # Разделение по порогу
+        threshold = 0.7  # Например
+        groups = matrix.split(threshold)
+        print(f"\nГруппы при пороге {threshold}:")
+        for i, group in enumerate(groups):
+            print(f"Группа {i + 1}: {group}")
+
+        # Получение подматриц
+        submatrices = matrix.split_to_matrices(threshold)
+        print(f"\nПодматрицы:")
+        for i, submatrix_info in enumerate(submatrices):
+            print(f"Подматрица {i + 1} (индексы {submatrix_info['indices']}):")
+            print(submatrix_info['matrix'])
+            print()
