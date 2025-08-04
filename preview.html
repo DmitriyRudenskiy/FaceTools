@@ -250,36 +250,38 @@
                     let index = 0;
                     for (let row = 0; row < 4; row++) {
                         for (let col = 0; col < 4; col++) {
-                            if (index < images.length) {
-                                const x = col * 256;
-                                const y = row * 256;
-                                ctx.drawImage(images[index], x, y, 256, 256);
-                            } else {
-                                // Если изображения нет, рисуем информацию о наборе или "Фото" с номером
-                                const x = col * 256;
-                                const y = row * 256;
+                            const x = col * 256;
+                            const y = row * 256;
+
+                            if (row === 0 && col === 0) {
+                                // В первой ячейке показываем "Набор" и номер набора
                                 ctx.fillStyle = '#f8f9fa';
                                 ctx.fillRect(x, y, 256, 256);
                                 ctx.fillStyle = '#6c757d';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
-
-                                if (row === 0 && col === 0) {
-                                    // В первой ячейке показываем "Набор" и номер набора
-                                    ctx.font = 'bold 20px Arial';
-                                    ctx.fillText('Набор', x + 128, y + 100);
-                                    ctx.font = 'bold 32px Arial';
-                                    ctx.fillText(setNumber.toString(), x + 128, y + 140);
-                                } else {
-                                    // В остальных пустых ячейках показываем "Фото" и номер
-                                    ctx.font = 'bold 20px Arial';
-                                    ctx.fillText('Фото', x + 128, y + 100);
-                                    ctx.font = 'bold 32px Arial';
-                                    const number = index + 1;
-                                    ctx.fillText(number.toString(), x + 128, y + 140);
-                                }
+                                ctx.font = 'bold 20px Arial';
+                                ctx.fillText('Набор', x + 128, y + 100);
+                                ctx.font = 'bold 32px Arial';
+                                ctx.fillText(setNumber.toString(), x + 128, y + 140);
+                            } else if (index < images.length) {
+                                // Если есть изображение, рисуем его
+                                ctx.drawImage(images[index], x, y, 256, 256);
+                                index++;
+                            } else {
+                                // Если изображения нет, рисуем "Фото" и номер
+                                ctx.fillStyle = '#f8f9fa';
+                                ctx.fillRect(x, y, 256, 256);
+                                ctx.fillStyle = '#6c757d';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.font = 'bold 20px Arial';
+                                ctx.fillText('Фото', x + 128, y + 100);
+                                ctx.font = 'bold 32px Arial';
+                                const number = index + 1;
+                                ctx.fillText(number.toString(), x + 128, y + 140);
+                                index++;
                             }
-                            index++;
                         }
                     }
 

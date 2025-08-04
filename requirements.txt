@@ -3,3 +3,8 @@ numpy
 Pillow
 ultralytics
 supervision
+tf_keras
+deepface
+facenet-pytorch
+torch
+torchvision

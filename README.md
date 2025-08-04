@@ -147,3 +147,8 @@ FaceCluster/
 **FaceCluster** поможет вам автоматически организовать ваши фотографии по людям, сэкономив часы ручной работы!
 
 Разбиваем по группе резкости
+
+файл
+~/.deepface/weights/retinaface.h5
+
+pip install --no-cache-dir "numpy==1.26.4" "opencv-python-headless==4.10.0.84" "facenet-pytorch==2.6.0" "torch==2.2.1" "torchvision==0.17.1" --find-links=https://download.pytorch.org/whl/torch_stable.html "pillow>=10.2.0,<10.3.0"
