@@ -9,12 +9,10 @@ import os
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
 class FaceComparator:
     def __init__(self, device=None, threshold=0.7):
         """
         Инициализация компаратора лиц
-
         Изменения:
         1. Автоматическое определение устройства (GPU/CPU)
         2. Параметр порога по умолчанию
@@ -49,14 +47,12 @@ class FaceComparator:
     def init(self, image_paths):
         """
         Пакетное добавление изображений в хранилище
-
         Изменения:
         1. Возвращает словарь с результатами вместо списка индексов
         2. Подробное логирование
         3. Обработка исключений для каждого изображения
         """
         results = {'success': [], 'errors': []}
-
         for image_path in image_paths:
             try:
                 if not os.path.exists(image_path):
@@ -67,6 +63,7 @@ class FaceComparator:
                     'index': index,
                     'path': image_path
                 })
+
             except Exception as e:
                 error_msg = f"❌ Ошибка при добавлении {image_path}: {str(e)}"
                 results['errors'].append({
@@ -80,7 +77,6 @@ class FaceComparator:
     def _add_single_image(self, image_path):
         """Внутренний метод для добавления одного изображения"""
         img = Image.open(image_path).convert('RGB')
-
         # Обнаружение лица с обработкой исключений
         face = self.mtcnn(img)
         if face is None:
@@ -93,7 +89,6 @@ class FaceComparator:
 
         # Конвертация в numpy для экономии памяти
         embedding_np = embedding.cpu().numpy().squeeze()
-
         self.storage.append({
             'image_path': image_path,
             'embedding': embedding_np,
@@ -142,7 +137,6 @@ class FaceComparator:
 
         emb1 = self.storage[index1]['embedding']
         emb2 = self.storage[index2]['embedding']
-
         distance, similarity = self._calculate_distance(emb1, emb2)
         is_same = distance < threshold
 
@@ -157,7 +151,6 @@ class FaceComparator:
     def compare_image_with_index(self, image_path, index, threshold=None):
         """Сравнение внешнего изображения с хранилищем"""
         threshold = threshold or self.default_threshold
-
         if index < 0 or index >= len(self.storage):
             raise IndexError(f"Неверный индекс: {index}")
 
@@ -165,7 +158,6 @@ class FaceComparator:
             # Обработка входного изображения
             img = Image.open(image_path).convert('RGB')
             face = self.mtcnn(img)
-
             if face is None:
                 raise ValueError("Лица не обнаружены")
 
@@ -176,7 +168,6 @@ class FaceComparator:
             # Сравнение эмбеддингов
             stored_emb = self.storage[index]['embedding']
             embedding_new = embedding_new.cpu().numpy().squeeze()
-
             distance, similarity = self._calculate_distance(embedding_new, stored_emb)
             is_same = distance < threshold
 
@@ -187,6 +178,7 @@ class FaceComparator:
                 'threshold': threshold,
                 'storage_index': index
             }
+
         except Exception as e:
             logger.exception("Ошибка сравнения")
             raise RuntimeError(f"Ошибка сравнения: {str(e)}")
@@ -211,6 +203,7 @@ class FaceComparator:
             removed = self.storage.pop(index)
             logger.info(f"Удалено изображение {removed['image_path']} (индекс {index})")
             return True
+
         raise IndexError(f"Неверный индекс: {index}")
 
     def compare_two_images(self, path1, path2, threshold=None):
@@ -229,7 +222,6 @@ class FaceComparator:
 
         emb1 = process_image(path1)
         emb2 = process_image(path2)
-
         distance, similarity = self._calculate_distance(emb1, emb2)
         is_same = distance < threshold
 
@@ -239,7 +231,6 @@ class FaceComparator:
             'is_same_person': is_same,
             'threshold': threshold
         }
-
 
 # Пример использования с улучшенной обработкой
 if __name__ == "__main__":
