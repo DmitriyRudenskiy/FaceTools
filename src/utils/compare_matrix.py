@@ -1,12 +1,19 @@
 import numpy as np
+import os
+import json
 
 class CompareMatrix:
     def __init__(self, size):
         self.matrix = np.zeros((size, size))
+        self.legend = []
 
     def fill(self, comparator):
         """Заполнение матрицы: диагональ - NULL, заполняются только элементы i > j"""
         size = self.matrix.shape[0]
+
+        # Заполняем legend путями к файлам
+        self.legend = [comparator.get_image_path(i) for i in range(size)]
+
         for i in range(size):
             for j in range(size):
                 if i == j:
@@ -95,3 +102,65 @@ class CompareMatrix:
                 })
 
         return submatrices
+
+    def save(self, filepath):
+        """
+        Сохраняет матрицу в JSON файл
+
+        Args:
+            filepath (str): Путь к файлу для сохранения
+        """
+        try:
+            # Создаем директорию, если она не существует
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+            # Преобразуем numpy массив в список для JSON сериализации
+            matrix_list = self.matrix.tolist()
+
+            # Заменяем NaN значения на null для JSON
+            for i in range(len(matrix_list)):
+                for j in range(len(matrix_list[i])):
+                    if isinstance(matrix_list[i][j], float) and np.isnan(matrix_list[i][j]):
+                        matrix_list[i][j] = None
+
+            data = {
+                'matrix': matrix_list,
+                'legend': self.legend,
+                'size': self.matrix.shape[0]
+            }
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+            print(f"Матрица успешно сохранена в JSON {filepath}")
+        except Exception as e:
+            print(f"Ошибка при сохранении матрицы в JSON: {e}")
+
+    def load(self, filepath):
+        """
+        Загружает матрицу из JSON файла
+
+        Args:
+            filepath (str): Путь к файлу для загрузки
+        """
+        try:
+            if not os.path.exists(filepath):
+                raise FileNotFoundError(f"Файл не найден: {filepath}")
+
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # Восстанавливаем матрицу из списка
+            matrix_list = data['matrix']
+
+            # Заменяем null значения обратно на NaN
+            for i in range(len(matrix_list)):
+                for j in range(len(matrix_list[i])):
+                    if matrix_list[i][j] is None:
+                        matrix_list[i][j] = np.nan
+
+            self.matrix = np.array(matrix_list)
+            self.legend = data.get('legend', [])
+            print(f"Матрица успешно загружена из JSON {filepath}")
+        except Exception as e:
+            print(f"Ошибка при загрузке матрицы из JSON: {e}")

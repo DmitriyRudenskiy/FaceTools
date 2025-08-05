@@ -1,5 +1,7 @@
 import sys
 import os
+import glob
+import argparse
 
 # Добавляем путь к src директории
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -7,30 +9,86 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from models.expert_deepface import ExpertDeepFaceAndArcFace
 from utils.compare_matrix import CompareMatrix
 
-# Пример использования:
-if __name__ == "__main__":
+
+def get_image_files_from_directory(directory_path):
+    """
+    Получает список графических файлов из директории
+
+    Args:
+        directory_path (str): Путь к директории с изображениями
+
+    Returns:
+        list: Список путей к графическим файлам
+    """
+    # Поддерживаемые расширения графических файлов
+    image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tiff', '*.tif', '*.webp']
+
+    image_paths = []
+
+    # Поиск файлов в указанной директории
+    for extension in image_extensions:
+        # Поиск файлов в основной директории
+        files = glob.glob(os.path.join(directory_path, extension))
+        image_paths.extend(files)
+
+        # Поиск файлов во всех поддиректориях
+        files = glob.glob(os.path.join(directory_path, '**', extension), recursive=True)
+        image_paths.extend(files)
+
+    # Удаление дубликатов и сортировка
+    image_paths = list(set(image_paths))
+    image_paths.sort()
+
+    return image_paths
+
+
+def main():
+    # Создаем парсер аргументов командной строки
+    parser = argparse.ArgumentParser(description='Face recognition and clustering')
+    parser.add_argument('-s', '--src', type=str, help='Path to directory with images')
+    parser.add_argument('-t', '--threshold', type=float, default=0.7, help='Threshold for clustering (default: 0.7)')
+
+    args = parser.parse_args()
+
+    # Проверяем, что аргумент src предоставлен
+    if not args.src:
+        print("Ошибка: Необходимо указать путь к директории с изображениями")
+        print("Использование: python script.py --src /path/to/images")
+        return
+
     # Создаем экземпляр компаратора
     comparator = ExpertDeepFaceAndArcFace(
         detector_backend="retinaface",
         distance_metric="cosine"
     )
 
+    # Получаем путь к директории из аргументов
+    images_directory = args.src
+
+    # Проверяем существование директории
+    if not os.path.exists(images_directory):
+        print(f"Директория не найдена: {images_directory}")
+        return
+
+    # Получаем список всех графических файлов из директории
+    image_paths = get_image_files_from_directory(images_directory)
+
+    # Проверяем, что файлы найдены
+    if not image_paths:
+        print(f"Не найдено графических файлов в директории: {images_directory}")
+        return
+
+    for i, path in enumerate(image_paths):
+        print(f"{i + 1}. {os.path.basename(path)}")
+
     # Инициализируем с изображениями
-    image_paths = [
-        "/Users/user/__!make_face/refer_bibi_1.png",
-        "/Users/user/__!make_face/refer_bibi_2.png",
-        "/Users/user/__!make_face/frame_Bibi/frame_05719_face_1.jpg",
-        "/Users/user/Downloads/ideogram_download_2025-08-03/0001_1_a-striking-artistic-portrait-of-a-woman-_55Pb9rG2QAePxTT6mPxVVA_niCnd0CrQhWLT9HfAwcBwA.jpeg",
-        "/Users/user/Downloads/ideogram_download_2025-08-03/0003_4_a-captivating-beauty-portrait-of-a-strik_zy28OHyKTIWGe3DduVimeA_yVxFlr85TM-wGt_i9yt04w.jpeg"
-    ]
-
     comparator.init(image_paths)
-    print(f"Количество обработанных изображений: {len(comparator.storage)}")
+    print(f"\nКоличество успешно обработанных изображений: {len(comparator.storage)}")
 
-    # Сравниваем первые два изображения
+    # Сравниваем первые два изображения (если есть хотя бы 2)
     if len(comparator.storage) >= 2:
         distance = comparator.compare(0, 1)
-        print(f"Расстояние между первыми двумя изображениями: {distance}")
+        print(f"\nРасстояние между первыми двумя изображениями: {distance}")
 
         # Верификация
         result = comparator.verify(distance)
@@ -40,19 +98,8 @@ if __name__ == "__main__":
     if len(comparator.storage) > 0:
         matrix = CompareMatrix(len(comparator.storage))
         matrix.fill(comparator)
+        matrix.save('./debug.json')
         matrix.display()
 
-        # Разделение по порогу
-        threshold = 0.7  # Например
-        groups = matrix.split(threshold)
-        print(f"\nГруппы при пороге {threshold}:")
-        for i, group in enumerate(groups):
-            print(f"Группа {i + 1}: {group}")
-
-        # Получение подматриц
-        submatrices = matrix.split_to_matrices(threshold)
-        print(f"\nПодматрицы:")
-        for i, submatrix_info in enumerate(submatrices):
-            print(f"Подматрица {i + 1} (индексы {submatrix_info['indices']}):")
-            print(submatrix_info['matrix'])
-            print()
+if __name__ == "__main__":
+    main()

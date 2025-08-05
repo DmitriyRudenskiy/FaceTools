@@ -39,3 +39,7 @@ class ExpertFaceNetMTCNN:
         emb2 = self.storage[index2][0]
         distance = (emb1 - emb2).norm().item()
         return distance
+
+    def get_image_path(self, index):
+        """Получение пути к изображению по индексу"""
+        return self.storage[index][1]
