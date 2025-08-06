@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 import os
 from pathlib import Path
+import sys
+import argparse
 
 
 class FaceOrientationDetector:
@@ -10,8 +12,8 @@ class FaceOrientationDetector:
         # Английские псевдонимы для ориентаций
         self.orientation_aliases = {
             "front": "front",  # Анфас
-            "left_profile": "l_prof",  # Профиль влево
-            "right_profile": "r_prof",  # Профиль вправо
+            "profile_left": "profile_left",  # Профиль влево
+            "profile_right": "profile_right",  # Профиль вправо
             "semi_front": "semi"  # Полупрофиль
         }
 
@@ -30,24 +32,78 @@ class FaceOrientationDetector:
             # Берем первое найденное лицо
             landmarks = face_landmarks_list[0]
 
-            # Получаем ключевые точки глаз
-            left_eye = np.mean(landmarks['left_eye'], axis=0)
-            right_eye = np.mean(landmarks['right_eye'], axis=0)
+            # Проверяем наличие ключевых точек глаз
+            left_eye = landmarks.get('left_eye')
+            right_eye = landmarks.get('right_eye')
 
-            # Вычисляем угол между глазами
-            delta_x = right_eye[0] - left_eye[0]
-            delta_y = right_eye[1] - left_eye[1]
-            angle = np.degrees(np.arctan2(delta_y, delta_x))
+            # Если оба глаза видны
+            if left_eye and right_eye:
+                left_eye_mean = np.mean(left_eye, axis=0)
+                right_eye_mean = np.mean(right_eye, axis=0)
 
-            # Определяем ориентацию
-            if abs(angle) < 15:
-                return "front"
-            elif angle > 15:
-                return "right_profile"
-            elif angle < -15:
-                return "left_profile"
+                # Вычисляем угол между глазами
+                delta_x = right_eye_mean[0] - left_eye_mean[0]
+                delta_y = right_eye_mean[1] - left_eye_mean[1]
+                angle = np.degrees(np.arctan2(delta_y, delta_x))
+
+                # Определяем ориентацию
+                if abs(angle) < 15:
+                    return "front"
+                elif angle > 15:
+                    return "profile_right"
+                elif angle < -15:
+                    return "profile_left"
+                else:
+                    return "semi_front"
+
+            # Если только один глаз виден, используем его положение
+            elif left_eye:
+                eye = np.mean(left_eye, axis=0)
+                nose = np.mean(landmarks['nose_bridge'], axis=0)
+                delta_x = nose[0] - eye[0]
+                delta_y = nose[1] - eye[1]
+                angle = np.degrees(np.arctan2(delta_y, delta_x))
+
+                # Определяем ориентацию
+                if angle > 30:
+                    return "profile_right"
+                elif angle < -30:
+                    return "profile_left"
+                else:
+                    return "semi_front"
+
+            elif right_eye:
+                eye = np.mean(right_eye, axis=0)
+                nose = np.mean(landmarks['nose_bridge'], axis=0)
+                delta_x = nose[0] - eye[0]
+                delta_y = nose[1] - eye[1]
+                angle = np.degrees(np.arctan2(delta_y, delta_x))
+
+                # Определяем ориентацию
+                if angle > 30:
+                    return "profile_right"
+                elif angle < -30:
+                    return "profile_left"
+                else:
+                    return "semi_front"
+
+            # Если глаза не видны, используем положение носа и уха
             else:
-                return "semi_front"
+                nose = np.mean(landmarks['nose_bridge'], axis=0)
+                ear = np.mean(landmarks['left_ear'], axis=0) if 'left_ear' in landmarks else np.mean(
+                    landmarks['right_ear'], axis=0)
+
+                delta_x = ear[0] - nose[0]
+                delta_y = ear[1] - nose[1]
+                angle = np.degrees(np.arctan2(delta_y, delta_x))
+
+                # Определяем ориентацию
+                if angle > 30:
+                    return "profile_right"
+                elif angle < -30:
+                    return "profile_left"
+                else:
+                    return "semi_front"
 
         except Exception as e:
             print(f"Ошибка при обработке файла {image_path}: {e}")
@@ -95,14 +151,13 @@ class FaceOrientationDetector:
                 orientation = self.detect_orientation(str(file_path))
 
                 if orientation is None:
-                    print(f"⚠️  Не удалось определить ориентацию: {file_path.name}")
+                    print(f"⚠️  Не удалось обнаружить лицо или определить его ориентацию: {file_path.name}")
                     continue
 
                 alias = self.get_alias(orientation)
 
                 # Если файл уже имеет префикс, пропускаем
                 if self.has_alias_prefix(file_path.name):
-                    print(f"✅ Файл уже имеет префикс: {file_path.name}")
                     processed_count += 1
                     continue
 
@@ -113,7 +168,6 @@ class FaceOrientationDetector:
                 # Переименовываем файл
                 try:
                     file_path.rename(new_file_path)
-                    print(f"✅ Переименован: {file_path.name} → {new_filename}")
                     renamed_count += 1
                 except Exception as e:
                     print(f"❌ Ошибка переименования {file_path.name}: {e}")
@@ -125,13 +179,22 @@ class FaceOrientationDetector:
         print(f"   Переименовано файлов: {renamed_count}")
 
 
-# Пример использования
-if __name__ == "__main__":
+def main():
+    # Создаем парсер аргументов командной строки
+    parser = argparse.ArgumentParser(
+        description='Face Orientation Detector - определяет ориентацию лица на фотографиях и переименовывает файлы')
+    parser.add_argument('directory', help='Путь к директории с изображениями')
+
+    # Парсим аргументы
+    args = parser.parse_args()
+
     # Создаем экземпляр детектора
     detector = FaceOrientationDetector()
 
-    # Укажите путь к директории с изображениями
-    directory_path = input("📁 Введите путь к директории с изображениями: ").strip()
+    # Обрабатываем директорию, переданную как аргумент
+    detector.process_directory(args.directory)
 
-    # Обрабатываем директорию
-    detector.process_directory(directory_path)
+
+# Запуск скрипта
+if __name__ == "__main__":
+    main()
