@@ -2,6 +2,15 @@ import numpy as np
 import os
 import json
 
+# Просто пример для демонстрации
+class MockComparator:
+    def get_image_path(self, index):
+        return f"image_{index}.png"
+
+    def compare(self, i, j):
+        # В реальности это может быть расстояние между изображениями i и j
+        return np.random.uniform(0, 1)
+
 class CompareMatrix:
     def __init__(self, size):
         self.matrix = np.zeros((size, size))
@@ -26,6 +35,16 @@ class CompareMatrix:
         """Вывод матрицы на экран"""
         print("Текущая матрица:")
         print(self.matrix)
+
+    def display_full(self):
+        """Вывод матрицы на экран целиком"""
+        print("Текущая матрица (полный вывод):")
+        with np.printoptions(threshold=np.inf,
+                             linewidth=1000,
+                             precision=2,
+                             suppress=True,
+                             formatter={'float_kind': lambda x: f'{x:1.2f}'}):
+            print(self.matrix)
 
     def split(self, threshold):
         """
