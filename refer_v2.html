@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализ матрицы JSON</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+            transition: all 0.3s;
+        }
+        .drop-area.highlight {
+            border-color: #007bff;
+            background-color: #e9f7fe;
+            transform: scale(1.02);
+        }
+        #file-input {
+            display: none;
+        }
+        #load-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        #load-button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            cursor: pointer;
+            position: sticky;
+            top: 0;
+            transition: background-color 0.2s;
+        }
+        th:hover {
+            background-color: #e0e0e0;
+        }
+        th.sort-asc::after {
+            content: " ▲";
+            font-size: 12px;
+        }
+        th.sort-desc::after {
+            content: " ▼";
+            font-size: 12px;
+        }
+        .summary-row {
+            font-weight: bold;
+            background-color: #f5f5f5;
+        }
+        .controls {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: none;
+        }
+        .filter-group {
+            display: inline-block;
+            margin-right: 15px;
+        }
+        label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        .filter-input {
+            padding: 5px;
+            width: 100px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .info-text {
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
+        }
+        .max-value-display {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stats-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .stats-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 5px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 5px 0;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+        .file-name {
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .highlight-cell {
+            background-color: #e6f7ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Анализ матрицы JSON</h1>
+
+        <div class="drop-area" id="drop-area">
+            <p>Перетащите JSON-файл сюда или нажмите кнопку ниже</p>
+            <input type="file" id="file-input" accept=".json">
+            <button id="load-button">Выбрать JSON-файл</button>
+            <p class="info-text">Ожидается файл с матрицей и списком файлов (files или legend)</p>
+        </div>
+
+        <div class="controls" id="controls">
+            <div class="filter-group">
+                <label for="min-max-filter">Мин. максимальное значение: </label>
+                <input type="number" id="min-max-filter" class="filter-input" step="0.01" min="0" max="1" value="0">
+                <span>(макс. значение: <span class="max-value-display" id="max-value-display">0.00</span>)</span>
+            </div>
+        </div>
+
+        <div id="table-container">
+            <div class="no-data">Загрузите JSON-файл для анализа</div>
+        </div>
+
+        <div class="stats-container" id="stats-container" style="display: none;">
+            <div class="stats-title">Статистика по данным</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Всего строк (файлы без refer_)</div>
+                    <div class="stat-value" id="total-rows">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Всего колонок (файлы с refer_)</div>
+                    <div class="stat-value" id="total-cols">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Среднее значение</div>
+                    <div class="stat-value" id="avg-value">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Максимальное значение</div>
+                    <div class="stat-value" id="max-value">0.00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('drop-area');
+            const fileInput = document.getElementById('file-input');
+            const loadButton = document.getElementById('load-button');
+            const tableContainer = document.getElementById('table-container');
+            const controls = document.getElementById('controls');
+            const minMaxFilter = document.getElementById('min-max-filter');
+            const maxValueDisplay = document.getElementById('max-value-display');
+            const statsContainer = document.getElementById('stats-container');
+
+            // Обработчик для выбора файла через кнопку
+            loadButton.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            // Обработчик изменения файла
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Обработчики для зоны перетаскивания
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                dropArea.classList.add('highlight');
+            }
+
+            function unhighlight() {
+                dropArea.classList.remove('highlight');
+            }
+
+            // Обработчик события drop
+            dropArea.addEventListener('drop', function(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length) {
+                    handleFiles(files);
+                }
+            });
+
+            function handleFileSelect(e) {
+                const files = e.target.files;
+                if (files.length) {
+                    handleFiles(files);
+                }
+            }
+
+            function handleFiles(files) {
+                const file = files[0];
+                if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const jsonData = JSON.parse(e.target.result);
+                            processJsonData(jsonData);
+                        } catch (error) {
+                            alert('Ошибка при разборе JSON: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                } else {
+                    alert('Пожалуйста, выберите JSON-файл.');
+                }
+            }
+
+            function processJsonData(jsonData) {
+                // Проверяем наличие необходимых данных
+                if (!jsonData.matrix || (!jsonData.files && !jsonData.legend)) {
+                    alert('JSON-файл должен содержать поля "matrix" и ("files" или "legend")');
+                    return;
+                }
+
+                // Показываем элементы управления
+                controls.style.display = 'block';
+                statsContainer.style.display = 'block';
+
+                // Скрываем зону загрузки после успешной загрузки
+                dropArea.style.display = 'none';
+
+                // Обработка данных и построение таблицы
+                buildTable(jsonData);
+            }
+
+            function buildTable(jsonData) {
+                const matrix = jsonData.matrix;
+                // Используем legend, если files отсутствует
+                const files = jsonData.files || jsonData.legend;
+
+                // Разделяем файлы на группы
+                const referFiles = [];
+                const nonReferFiles = [];
+
+                files.forEach(file => {
+                    if (file.includes('refer_')) {
+                        referFiles.push(file);
+                    } else {
+                        nonReferFiles.push(file);
+                    }
+                });
+
+                // Создаем таблицу
+                const table = document.createElement('table');
+                table.id = 'data-table';
+
+                // Создаем заголовок таблицы
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+
+                // Добавляем заголовок для имен файлов
+                const fileHeader = document.createElement('th');
+                fileHeader.textContent = 'Файл';
+                fileHeader.style.width = '200px';
+                fileHeader.dataset.sortKey = 'file';
+                fileHeader.addEventListener('click', () => sortTable(table, 0));
+                headerRow.appendChild(fileHeader);
+
+                // Добавляем заголовки для файлов с 'refer_'
+                referFiles.forEach(referFile => {
+                    const th = document.createElement('th');
+                    // Извлекаем только цифру из refer_frame_1455.png
+                    const fileName = referFile.split('/').pop();
+                    let displayText = fileName;
+
+                    // Используем регулярное выражение для извлечения цифр
+                    const match = fileName.match(/refer_frame_(\d+)\.png/);
+                    if (match) {
+                        displayText = match[1];
+                    } else {
+                        // Попробуем другой формат, если цифры не найдены
+                        const numMatch = fileName.match(/(\d+)\.png/);
+                        if (numMatch) {
+                            displayText = numMatch[1];
+                        }
+                    }
+
+                    th.textContent = displayText;
+                    th.title = fileName;
+                    th.dataset.sortKey = fileName;
+                    th.dataset.columnType = 'refer';
+                    th.addEventListener('click', () => sortTable(table, Array.from(thead.querySelectorAll('th')).indexOf(th)));
+                    headerRow.appendChild(th);
+                });
+
+                // Добавляем заголовок для суммы
+                const sumHeader = document.createElement('th');
+                sumHeader.textContent = 'Сумма';
+                sumHeader.dataset.sortKey = 'sum';
+                sumHeader.dataset.columnType = 'sum';
+                sumHeader.addEventListener('click', () => sortTable(table, Array.from(thead.querySelectorAll('th')).indexOf(sumHeader)));
+                headerRow.appendChild(sumHeader);
+
+                // Добавляем заголовок для максимума
+                const maxHeader = document.createElement('th');
+                maxHeader.textContent = 'Максимум';
+                maxHeader.dataset.sortKey = 'max';
+                maxHeader.dataset.columnType = 'max';
+                maxHeader.addEventListener('click', () => sortTable(table, Array.from(thead.querySelectorAll('th')).indexOf(maxHeader)));
+                headerRow.appendChild(maxHeader);
+
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // Создаем тело таблицы
+                const tbody = document.createElement('tbody');
+
+                // Для каждой строки, соответствующей файлу без 'refer_'
+                nonReferFiles.forEach((nonReferFile, rowIndex) => {
+                    // Находим индекс этой строки в общем списке файлов
+                    const globalRowIndex = files.indexOf(nonReferFile);
+
+                    // Пропускаем, если индекс за пределами матрицы
+                    if (globalRowIndex >= matrix.length) return;
+
+                    const tr = document.createElement('tr');
+
+                    // Добавляем ячейку с именем файла
+                    const fileNameCell = document.createElement('td');
+                    const fileName = nonReferFile.split('/').pop();
+                    // Извлекаем номер из имени файла (например, item_00001.png -> 00001)
+                    let displayFileName = fileName;
+                    const numMatch = fileName.match(/item_(\d+)\.png/);
+                    if (numMatch) {
+                        displayFileName = numMatch[1];
+                    }
+                    fileNameCell.innerHTML = `<span class="file-name">${displayFileName}</span>`;
+                    fileNameCell.title = nonReferFile;
+                    tr.appendChild(fileNameCell);
+
+                    let rowSum = 0;
+                    let rowMax = -Infinity;
+                    let maxColIndex = -1;
+
+                    // Добавляем ячейки для каждого файла с 'refer_'
+                    referFiles.forEach((referFile, colIndex) => {
+                        // Находим индекс этого столбца в общем списке файлов
+                        const globalColIndex = files.indexOf(referFile);
+
+                        // Пропускаем, если индекс за пределами матрицы
+                        if (globalColIndex >= matrix[globalRowIndex].length) return;
+
+                        // Получаем значение из матрицы
+                        let value = matrix[globalRowIndex][globalColIndex];
+
+                        // Если значение null, заменяем на 0
+                        if (value === null) {
+                            value = 0;
+                        }
+
+                        // Добавляем к сумме
+                        rowSum += value;
+
+                        // Обновляем максимум
+                        if (value > rowMax) {
+                            rowMax = value;
+                            maxColIndex = colIndex;
+                        }
+
+                        // Создаем ячейку
+                        const td = document.createElement('td');
+                        td.textContent = value.toFixed(4); // Округляем до 4 знаков
+                        td.dataset.value = value;
+                        tr.appendChild(td);
+                    });
+
+                    // Добавляем ячейку с суммой
+                    const sumCell = document.createElement('td');
+                    sumCell.textContent = rowSum.toFixed(4);
+                    sumCell.dataset.value = rowSum;
+                    tr.appendChild(sumCell);
+
+                    // Добавляем ячейку с максимумом
+                    const maxCell = document.createElement('td');
+                    maxCell.textContent = rowMax > -Infinity ? rowMax.toFixed(4) : 'N/A';
+                    maxCell.dataset.value = rowMax > -Infinity ? rowMax : 0;
+                    maxCell.dataset.rowIndex = rowIndex;
+                    tr.appendChild(maxCell);
+
+                    // Выделяем ячейку с максимальным значением
+                    if (maxColIndex >= 0 && maxColIndex < tr.cells.length - 2) {
+                        tr.cells[maxColIndex + 1].classList.add('highlight-cell');
+                    }
+
+                    // Добавляем строку в таблицу
+                    tbody.appendChild(tr);
+                });
+
+                table.appendChild(tbody);
+
+                // Очищаем контейнер и добавляем таблицу
+                tableContainer.innerHTML = '';
+                tableContainer.appendChild(table);
+
+                // Добавляем строку с итогами
+                addSummaryRow(table, referFiles.length);
+
+                // Обновляем статистику
+                updateStats(jsonData, nonReferFiles.length, referFiles.length);
+
+                // Добавляем обработчик для фильтра
+                minMaxFilter.addEventListener('input', () => {
+                    const minMaxValue = parseFloat(minMaxFilter.value) || 0;
+                    filterRows(table, minMaxValue);
+                });
+
+                // Инициализируем отображение максимального значения
+                updateMaxValueDisplay(table);
+            }
+
+            function updateStats(jsonData, totalRows, totalCols) {
+                document.getElementById('total-rows').textContent = totalRows;
+                document.getElementById('total-cols').textContent = totalCols;
+
+                // Вычисляем среднее значение
+                let totalSum = 0;
+                let totalCount = 0;
+                let maxValue = 0;
+
+                const matrix = jsonData.matrix;
+
+                for (let i = 0; i < matrix.length; i++) {
+                    for (let j = 0; j < matrix[i].length; j++) {
+                        const value = matrix[i][j];
+                        if (value !== null) {
+                            totalSum += value;
+                            totalCount++;
+                            if (value > maxValue) {
+                                maxValue = value;
+                            }
+                        }
+                    }
+                }
+
+                const avgValue = totalCount > 0 ? totalSum / totalCount : 0;
+
+                document.getElementById('avg-value').textContent = avgValue.toFixed(4);
+                document.getElementById('max-value').textContent = maxValue.toFixed(4);
+            }
+
+            function addSummaryRow(table, referFileCount) {
+                const tbody = table.querySelector('tbody');
+                const rows = tbody.querySelectorAll('tr');
+
+                if (rows.length === 0) return;
+
+                // Подсчитываем суммы для каждой колонки
+                const columnSums = new Array(referFileCount + 2).fill(0); // +2 для колонок "Сумма" и "Максимум"
+                const columnValues = Array.from({ length: referFileCount + 2 }, () => []);
+
+                rows.forEach(row => {
+                    // Пропускаем строки с итогами
+                    if (row.classList.contains('summary-row')) return;
+
+                    const cells = row.querySelectorAll('td');
+                    cells.forEach((cell, colIndex) => {
+                        if (colIndex > 0) { // Пропускаем первую колонку (имя файла)
+                            const value = parseFloat(cell.dataset.value);
+                            if (!isNaN(value)) {
+                                columnSums[colIndex - 1] += value;
+                                columnValues[colIndex - 1].push(value);
+                            }
+                        }
+                    });
+                });
+
+                // Вычисляем средние значения
+                const averages = columnSums.map((sum, index) => {
+                    return columnValues[index].length > 0 ? sum / columnValues[index].length : 0;
+                });
+
+                // Вычисляем средние разницы
+                const averageDiffs = columnValues.map(values => {
+                    if (values.length < 2) return 0;
+
+                    let totalDiff = 0;
+                    for (let i = 0; i < values.length - 1; i++) {
+                        totalDiff += Math.abs(values[i] - values[i + 1]);
+                    }
+                    return totalDiff / (values.length - 1);
+                });
+
+                // Вычисляем разницу между максимальным и минимальным
+                const maxMinDiffs = columnValues.map(values => {
+                    if (values.length === 0) return 0;
+
+                    const max = Math.max(...values);
+                    const min = Math.min(...values);
+                    return max - min;
+                });
+
+                // Создаем строку для средних значений
+                const avgRow = document.createElement('tr');
+                avgRow.className = 'summary-row';
+
+                const avgNameCell = document.createElement('td');
+                avgNameCell.textContent = 'Среднее значение';
+                avgRow.appendChild(avgNameCell);
+
+                averages.forEach((avg, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = avg.toFixed(4);
+                    avgRow.appendChild(td);
+                });
+
+                // Создаем строку для средних разниц
+                const avgDiffRow = document.createElement('tr');
+                avgDiffRow.className = 'summary-row';
+
+                const avgDiffNameCell = document.createElement('td');
+                avgDiffNameCell.textContent = 'Средняя разница';
+                avgDiffRow.appendChild(avgDiffNameCell);
+
+                averageDiffs.forEach((diff, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = diff ? diff.toFixed(4) : '';
+                    avgDiffRow.appendChild(td);
+                });
+
+                // Создаем строку для разницы между макс. и мин.
+                const maxMinDiffRow = document.createElement('tr');
+                maxMinDiffRow.className = 'summary-row';
+
+                const maxMinDiffNameCell = document.createElement('td');
+                maxMinDiffNameCell.textContent = 'Разница (макс-мин)';
+                maxMinDiffRow.appendChild(maxMinDiffNameCell);
+
+                maxMinDiffs.forEach((diff, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = diff ? diff.toFixed(4) : '';
+                    maxMinDiffRow.appendChild(td);
+                });
+
+                // Добавляем строки в таблицу
+                tbody.appendChild(avgRow);
+                tbody.appendChild(avgDiffRow);
+                tbody.appendChild(maxMinDiffRow);
+            }
+
+            function updateMaxValueDisplay(table) {
+                const tbody = table.querySelector('tbody');
+                const rows = tbody.querySelectorAll('tr');
+
+                let maxValue = 0;
+
+                rows.forEach(row => {
+                    // Пропускаем строки с итогами
+                    if (row.classList.contains('summary-row')) return;
+
+                    const maxCell = row.cells[row.cells.length - 1]; // Последняя колонка - максимум
+                    const value = parseFloat(maxCell.dataset.value);
+
+                    if (value > maxValue) {
+                        maxValue = value;
+                    }
+                });
+
+                maxValueDisplay.textContent = maxValue.toFixed(2);
+
+                // Устанавливаем максимальное значение для фильтра
+                minMaxFilter.max = maxValue;
+                minMaxFilter.value = 0;
+
+                // Фильтруем строки с начальным значением
+                filterRows(table, 0);
+            }
+
+            function filterRows(table, minMaxValue) {
+                const tbody = table.querySelector('tbody');
+                const rows = tbody.querySelectorAll('tr');
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    // Пропускаем строки с итогами
+                    if (row.classList.contains('summary-row')) return;
+
+                    const maxCell = row.cells[row.cells.length - 1]; // Последняя колонка - максимум
+                    const value = parseFloat(maxCell.dataset.value);
+
+                    if (value >= minMaxValue) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Обновляем статистику
+                document.getElementById('total-rows').textContent = visibleCount;
+            }
+
+            function sortTable(table, columnIndex) {
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                // Определяем текущее направление сортировки
+                const th = table.querySelector(`thead th:nth-child(${columnIndex + 1})`);
+                let direction = th.classList.contains('sort-asc') ? -1 : 1;
+
+                // Удаляем классы сортировки у всех заголовков
+                table.querySelectorAll('thead th').forEach(header => {
+                    header.classList.remove('sort-asc', 'sort-desc');
+                });
+
+                // Устанавливаем класс сортировки для текущего заголовка
+                th.classList.add(direction === 1 ? 'sort-asc' : 'sort-desc');
+
+                // Сортируем строки
+                rows.sort((a, b) => {
+                    const aCell = a.cells[columnIndex];
+                    const bCell = b.cells[columnIndex];
+
+                    // Пропускаем строки с итогами
+                    if (aCell.parentElement.classList.contains('summary-row') ||
+                        bCell.parentElement.classList.contains('summary-row')) {
+                        return 0;
+                    }
+
+                    let aValue, bValue;
+
+                    // Если columnIndex === 0, сортируем по тексту
+                    if (columnIndex === 0) {
+                        aValue = aCell.textContent;
+                        bValue = bCell.textContent;
+                        return direction * aValue.localeCompare(bValue);
+                    }
+                    // Иначе сортируем по числовому значению
+                    else {
+                        aValue = parseFloat(aCell.dataset.value);
+                        bValue = parseFloat(bCell.dataset.value);
+
+                        // Обрабатываем случай, когда значение не число
+                        if (isNaN(aValue)) aValue = -Infinity;
+                        if (isNaN(bValue)) bValue = -Infinity;
+
+                        return direction * (aValue - bValue);
+                    }
+                });
+
+                // Перестраиваем таблицу
+                rows.forEach(row => tbody.appendChild(row));
+            }
+        });
+    </script>
+</body>
+</html>

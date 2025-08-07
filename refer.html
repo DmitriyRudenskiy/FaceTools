@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализатор матрицы схожести изображений</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        .upload-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .file-input-label {
+            background: #4a6fcb;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            display: inline-block;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .file-input-label:hover {
+            background: #3a5cb5;
+            transform: translateY(-2px);
+        }
+
+        .file-input-label:active {
+            transform: translateY(1px);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .drop-area {
+            width: 100%;
+            max-width: 600px;
+            height: 200px;
+            border: 3px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .drop-area.highlight {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .drop-area i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .drop-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .drop-hint {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .results-section {
+            display: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            margin-top: 20px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 5px;
+            color: #4CAF50;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(30, 30, 40, 0.8);
+        }
+
+        th {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        th:hover {
+            background: #34495e;
+        }
+
+        th.sorted-asc::after {
+            content: " ▲";
+            font-size: 0.8em;
+        }
+
+        th.sorted-desc::after {
+            content: " ▼";
+            font-size: 0.8em;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(52, 152, 219, 0.15);
+        }
+
+        .non-refer-cell {
+            font-weight: 600;
+            color: #3498db;
+        }
+
+        .sum-cell {
+            font-weight: bold;
+            color: #2ecc71;
+        }
+
+        .avg-cell {
+            color: #f1c40f;
+        }
+
+        .range-cell {
+            color: #e74c3c;
+        }
+
+        .dev-cell {
+            color: #9b59b6;
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 30px;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .upload-section, .results-section {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .file-input-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            th, td {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Анализатор матрицы схожести изображений</h1>
+            <p class="subtitle">
+                Загрузите JSON-файл с матрицей схожести изображений для анализа.
+                Таблица покажет изображения без 'refer_' в имени, которые имеют максимальную схожесть
+                с изображениями, содержащими 'refer_' в имени.
+            </p>
+        </header>
+
+        <section class="upload-section">
+            <div class="upload-container">
+                <div class="file-input-wrapper">
+                    <label class="file-input-label">
+                        Выберите файл
+                        <input type="file" id="fileInput" accept=".json">
+                    </label>
+                    <div class="file-input-label" id="resetButton" style="background: #e74c3c; display: none;">
+                        Сбросить
+                    </div>
+                </div>
+
+                <div class="drop-area" id="dropArea">
+                    <div class="drop-text">Перетащите JSON-файл сюда</div>
+                    <div class="drop-hint">Поддерживаемый формат: JSON с матрицей и легендой</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-section" id="resultsSection">
+            <div class="results-header">
+                <h2>Результаты анализа</h2>
+                <div class="stats" id="statsContainer"></div>
+            </div>
+
+            <div class="table-container">
+                <table id="resultTable">
+                    <thead id="tableHeader"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="footer-note">
+            Анализ матрицы схожести изображений | Для работы требуется JSON-файл с матрицей и легендой
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('fileInput');
+            const dropArea = document.getElementById('dropArea');
+            const resultsSection = document.getElementById('resultsSection');
+            const tableHeader = document.getElementById('tableHeader');
+            const tableBody = document.getElementById('tableBody');
+            const resetButton = document.getElementById('resetButton');
+            const statsContainer = document.getElementById('statsContainer');
+
+            let currentData = null;
+            let sortColumn = 'sum';
+            let sortDirection = 'desc';
+
+            // Обработка выбора файла
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Обработка кнопки сброса
+            resetButton.addEventListener('click', resetApp);
+
+            // Обработка перетаскивания файла
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.add('highlight');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.remove('highlight');
+                }, false);
+            });
+
+            dropArea.addEventListener('drop', handleDrop, false);
+
+            function handleFileSelect(e) {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/json') {
+                    processFile(file);
+                }
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const file = dt.files[0];
+                if (file && file.type === 'application/json') {
+                    processFile(file);
+                }
+            }
+
+            function processFile(file) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        currentData = jsonData;
+                        processData(jsonData);
+                        resetButton.style.display = 'block';
+                    } catch (error) {
+                        alert('Ошибка при чтении файла: неверный формат JSON');
+                        console.error('Ошибка парсинга JSON:', error);
+                    }
+                };
+
+                reader.readAsText(file);
+            }
+
+            function processData(data) {
+                if (!data.matrix || !data.legend) {
+                    alert('Неверный формат данных: отсутствует матрица или легенда');
+                    return;
+                }
+
+                // Находим индексы refer-файлов
+                const referIndices = [];
+                const referNames = [];
+
+                data.legend.forEach((name, index) => {
+                    if (name.includes('refer_')) {
+                        referIndices.push(index);
+                        referNames.push(name);
+                    }
+                });
+
+                if (referIndices.length === 0) {
+                    alert('В данных не найдены refer-файлы');
+                    return;
+                }
+
+                // Находим non-refer файлы с максимальными значениями
+                const nonReferItems = [];
+
+                data.legend.forEach((name, index) => {
+                    if (!name.includes('refer_')) {
+                        let maxVal = -Infinity;
+
+                        // Находим максимальное значение для этого non-refer файла среди всех refer
+                        referIndices.forEach(refIndex => {
+                            const val = data.matrix[index][refIndex];
+                            if (val !== null && val > maxVal) {
+                                maxVal = val;
+                            }
+                        });
+
+                        if (maxVal > -Infinity) {
+                            nonReferItems.push({
+                                index,
+                                name,
+                                maxVal
+                            });
+                        }
+                    }
+                });
+
+                if (nonReferItems.length === 0) {
+                    alert('Не найдено non-refer файлов с данными');
+                    return;
+                }
+
+                // Сортируем non-refer файлы по максимальному значению
+                nonReferItems.sort((a, b) => b.maxVal - a.maxVal);
+
+                // Создаем данные для таблицы
+                const tableData = nonReferItems.map(item => {
+                    const row = {
+                        name: item.name,
+                        values: [],
+                        sum: 0,
+                        min: Infinity,
+                        max: -Infinity
+                    };
+
+                    // Собираем значения для каждого refer
+                    referIndices.forEach(refIndex => {
+                        const val = data.matrix[item.index][refIndex] || 0;
+                        row.values.push(val);
+                        row.sum += val;
+                        if (val < row.min) row.min = val;
+                        if (val > row.max) row.max = val;
+                    });
+
+                    // Вычисляем среднее
+                    row.avg = row.sum / referIndices.length;
+
+                    // Вычисляем разницу
+                    row.range = row.max - row.min;
+
+                    // Вычисляем среднюю разницу (стандартное отклонение)
+                    const squareDiffs = row.values.map(val => Math.pow(val - row.avg, 2));
+                    const avgSquareDiff = squareDiffs.reduce((sum, val) => sum + val, 0) / squareDiffs.length;
+                    row.stdDev = Math.sqrt(avgSquareDiff);
+
+                    return row;
+                });
+
+                // Показываем секцию с результатами
+                resultsSection.style.display = 'block';
+
+                // Обновляем статистику
+                updateStats(tableData, referNames.length);
+
+                // Рендерим таблицу
+                renderTable(tableData, referNames);
+
+                // Прокручиваем к результатам
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function updateStats(tableData, referCount) {
+                const totalItems = tableData.length;
+                const totalSum = tableData.reduce((sum, row) => sum + row.sum, 0);
+                const totalAvg = totalSum / (totalItems * referCount);
+
+                let minSum = Infinity;
+                let maxSum = -Infinity;
+                let sumSum = 0;
+
+                tableData.forEach(row => {
+                    sumSum += row.sum;
+                    if (row.sum < minSum) minSum = row.sum;
+                    if (row.sum > maxSum) maxSum = row.sum;
+                });
+
+                const avgSum = sumSum / totalItems;
+                const rangeSum = maxSum - minSum;
+
+                statsContainer.innerHTML = `
+                    <div class="stat-card">
+                        <div>Файлов</div>
+                        <div class="stat-value">${totalItems}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Средняя сумма</div>
+                        <div class="stat-value">${avgSum.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Мин. сумма</div>
+                        <div class="stat-value">${minSum.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Макс. сумма</div>
+                        <div class="stat-value">${maxSum.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div>Разница сумм</div>
+                        <div class="stat-value">${rangeSum.toFixed(2)}</div>
+                    </div>
+                `;
+            }
+
+            function renderTable(data, referNames) {
+                // Очищаем таблицу
+                tableHeader.innerHTML = '';
+                tableBody.innerHTML = '';
+
+                // Создаем заголовок таблицы
+                const headerRow = document.createElement('tr');
+
+                // Добавляем заголовок для non-refer файлов
+                const nonReferHeader = document.createElement('th');
+                nonReferHeader.textContent = 'Non-refer файл';
+                headerRow.appendChild(nonReferHeader);
+
+                // Добавляем заголовки для refer-файлов
+                referNames.forEach(name => {
+                    const th = document.createElement('th');
+                    // Берем только имя файла без пути
+                    const fileName = name.split('/').pop();
+                    th.textContent = fileName;
+                    headerRow.appendChild(th);
+                });
+
+                // Добавляем заголовки для статистических колонок
+                const statsHeaders = ['Сумма', 'Среднее', 'Разница', 'Ср. разница'];
+                statsHeaders.forEach(text => {
+                    const th = document.createElement('th');
+                    th.textContent = text;
+                    th.dataset.sort = text.toLowerCase().replace('ср. разница', 'stddev');
+
+                    if (th.dataset.sort === sortColumn) {
+                        th.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    }
+
+                    th.addEventListener('click', () => {
+                        sortColumn = th.dataset.sort;
+                        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                        sortData(data);
+                        renderTable(data, referNames);
+                    });
+
+                    headerRow.appendChild(th);
+                });
+
+                tableHeader.appendChild(headerRow);
+
+                // Сортируем данные перед отображением
+                sortData(data);
+
+                // Добавляем строки таблицы
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+
+                    // Ячейка с именем non-refer файла
+                    const nameTd = document.createElement('td');
+                    // Берем только имя файла без пути
+                    const fileName = row.name.split('/').pop();
+                    nameTd.textContent = fileName;
+                    nameTd.className = 'non-refer-cell';
+                    tr.appendChild(nameTd);
+
+                    // Ячейки со значениями
+                    row.values.forEach(val => {
+                        const td = document.createElement('td');
+                        td.textContent = val.toFixed(4);
+                        tr.appendChild(td);
+                    });
+
+                    // Статистические ячейки
+                    const sumTd = document.createElement('td');
+                    sumTd.textContent = row.sum.toFixed(4);
+                    sumTd.className = 'sum-cell';
+                    tr.appendChild(sumTd);
+
+                    const avgTd = document.createElement('td');
+                    avgTd.textContent = row.avg.toFixed(4);
+                    avgTd.className = 'avg-cell';
+                    tr.appendChild(avgTd);
+
+                    const rangeTd = document.createElement('td');
+                    rangeTd.textContent = row.range.toFixed(4);
+                    rangeTd.className = 'range-cell';
+                    tr.appendChild(rangeTd);
+
+                    const devTd = document.createElement('td');
+                    devTd.textContent = row.stdDev.toFixed(4);
+                    devTd.className = 'dev-cell';
+                    tr.appendChild(devTd);
+
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            function sortData(data) {
+                data.sort((a, b) => {
+                    let valA, valB;
+
+                    switch(sortColumn) {
+                        case 'sum':
+                            valA = a.sum;
+                            valB = b.sum;
+                            break;
+                        case 'среднее':
+                            valA = a.avg;
+                            valB = b.avg;
+                            break;
+                        case 'разница':
+                            valA = a.range;
+                            valB = b.range;
+                            break;
+                        case 'stddev':
+                            valA = a.stdDev;
+                            valB = b.stdDev;
+                            break;
+                        default:
+                            valA = a.sum;
+                            valB = b.sum;
+                    }
+
+                    if (sortDirection === 'asc') {
+                        return valA - valB;
+                    } else {
+                        return valB - valA;
+                    }
+                });
+            }
+
+            function resetApp() {
+                fileInput.value = '';
+                resultsSection.style.display = 'none';
+                resetButton.style.display = 'none';
+                currentData = null;
+            }
+        });
+    </script>
+</body>
+</html>

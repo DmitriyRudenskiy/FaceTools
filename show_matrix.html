@@ -8,6 +8,31 @@
     <!-- Подключаем Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Стили для зоны перетаскивания файла */
+        #dropZone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 50px;
+            text-align: center;
+            margin: 20px auto;
+            width: 80%;
+            max-width: 600px;
+            background-color: #f9f9f9;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        #dropZone.hover {
+            border-color: #007bff;
+            background-color: #e9f4ff;
+        }
+        #dropZone p {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #ccc;
+        }
+        /* Стили для основного контента (изначально скрыты) */
+        #mainContent {
+            display: none;
+        }
         .matrix-table {
             font-size: 0.7rem;
         }
@@ -48,7 +73,7 @@
             display: block;
         }
         .image-container .weight {
-            color: #666;
+            color: #ccc;
             padding: 2px;
         }
         .image-container .index {
@@ -56,12 +81,22 @@
             font-weight: bold;
         }
         .table-container {
-            max-height: 500px;
+            max-height: 500px; /* Увеличена высота */
             overflow: auto;
         }
         .header-cell {
             background-color: #f8f9fa;
             font-weight: bold;
+            position: sticky; /* Закрепляем заголовки */
+            top: 0;
+            z-index: 10;
+        }
+        /* Закрепляем первый столбец */
+        .matrix-row td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #f8f9fa;
+            z-index: 5;
         }
         .image-display {
             min-height: 180px;
@@ -69,126 +104,126 @@
             border-radius: 4px;
             padding: 10px;
             margin-bottom: 20px;
+            overflow-x: auto; /* Добавляем горизонтальный скролл */
         }
         .matrix-row:hover {
             background-color: #f8f9fa !important;
         }
         /* Стили для контейнера графика */
         .chart-container {
-            margin: 20px 0; /* Отступы сверху и снизу */
-            position: relative; /* Для правильного позиционирования */
-            height: 300px; /* Высота графика */
+            margin: 20px 0;
+            position: relative;
+            height: auto; /* Динамическая высота вместо фиксированной */
         }
-        /* Скрытие элемента по умолчанию */
-        .chart-container, #resetButton {
+        /* Показываем график по умолчанию */
+        .chart-container {
+            display: block;
+        }
+        /* Скрытие кнопки сброса по умолчанию */
+        #resetButton {
             display: none;
+        }
+        /* Генерация случайных цветов для графика */
+        .color-legend-item {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .color-box {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 4px;
+            border: 1px solid #ccc;
+        }
+        /* Стили для нового столбца рейтинга */
+        .rating-cell {
+            font-weight: bold;
+            color: #0d6efd;
+            min-width: 80px;
+            text-align: right !important;
+            padding-right: 8px !important;
         }
     </style>
 </head>
 <body>
     <div class="container-fluid mt-4">
         <h1 class="mb-4">Матрица схожести изображений</h1>
-        <div class="row">
-            <div class="col-12">
-                <div class="image-display">
-                    <div id="imageGrid" class="image-row"></div>
+        <!-- Область загрузки файла -->
+        <div id="dropZone">
+            <p>Перетащите JSON файл с данными сюда или кликните для выбора</p>
+            <input type="file" id="fileInput" accept=".json" style="display: none;">
+        </div>
+        <!-- Основной контент (изначально скрыт) -->
+        <div id="mainContent">
+            <div class="row">
+                <div class="col-12">
+                    <div class="image-display">
+                        <div id="imageGrid" class="image-row"></div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <!-- Контейнер для графика, изначально скрыт -->
-        <div class="row">
-            <div class="col-12">
-                <div class="chart-container" id="chartContainer">
-                    <h3>График разниц для строки <span id="chartRowIndex"></span></h3>
-                    <canvas id="differencesChart"></canvas>
+            <!-- Контейнер для графика, отображается по умолчанию -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="chart-container" id="chartContainer">
+                        <h3>График разниц для всех строк</h3>
+                        <div id="colorLegend" class="mb-2"></div> <!-- Легенда цветов -->
+                        <canvas id="differencesChart"></canvas>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-12">
-                <div class="table-container">
-                    <table class="table table-striped table-bordered matrix-table" id="matrixTable">
-                        <thead>
-                            <tr>
-                                <th class="header-cell">#</th>
-                                <th class="header-cell">0</th>
-                                <th class="header-cell">1</th>
-                                <th class="header-cell">2</th>
-                                <th class="header-cell">3</th>
-                                <th class="header-cell">4</th>
-                                <th class="header-cell">5</th>
-                                <th class="header-cell">6</th>
-                                <th class="header-cell">7</th>
-                                <th class="header-cell">8</th>
-                                <th class="header-cell">9</th>
-                                <th class="header-cell">10</th>
-                                <th class="header-cell">11</th>
-                                <th class="header-cell">12</th>
-                                <th class="header-cell">13</th>
-                                <th class="header-cell">14</th>
-                                <th class="header-cell">15</th>
-                                <th class="header-cell">16</th>
-                                <th class="header-cell">17</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody">
-                        </tbody>
-                    </table>
+            <div class="row">
+                <div class="col-12">
+                    <div class="table-container">
+                        <table class="table table-striped table-bordered matrix-table" id="matrixTable">
+                            <thead>
+                                <tr>
+                                    <th class="header-cell">#</th>
+                                    <!-- Динамически генерируемые заголовки -->
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-        <!-- Кнопка сброса, изначально скрыта -->
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                <button id="resetButton" class="btn btn-secondary">Сбросить выбор</button>
+            <!-- Кнопка сброса, изначально скрыта -->
+            <div class="row mb-4">
+                <div class="col-12 text-center">
+                    <button id="resetButton" class="btn btn-secondary">Сбросить выбор</button>
+                </div>
             </div>
         </div>
     </div>
     <script>
-        // JSON данные
-        const data = {
-            "matrix": [
-                [null, 0.5812440026186144, 0.5028639085528365, 0.5464258742978332, 0.3503018344415715, 0.4230005378092867, 0.4863485155695568, 0.5983049451587581, 0.41180880993559044, 0.4866471783296613, 0.49345450549582004, 0.5629886651259999, 0.4225133431218575, 0.43420242170764367, 0.40539676369237787, 0.42054913272119254, 0.47544245309926814, 0.5509965997324136],
-                [0.5812440026186144, null, 0.288056800965532, 0.5974228782305115, 0.4388350209377121, 0.4540490168733181, 0.37148702133310296, 0.5004857473478321, 0.4644855811355807, 0.43643317591885444, 0.47352087103526297, 0.5013060489336763, 0.35941877808102407, 0.49469219371714224, 0.560405820669748, 0.5256519392029635, 0.501440131518093, 0.4512197969390339],
-                [0.5028639085528365, 0.288056800965532, null, 0.6039302861597244, 0.33161022133298723, 0.3329665848675937, 0.3367787345666571, 0.499324226467843, 0.40278367258175907, 0.42370393578529564, 0.31621405710417383, 0.35191288076294813, 0.21094056664636374, 0.37617276973688074, 0.45178108465900646, 0.4139315624565799, 0.3992154847969811, 0.34824284972628183],
-                [0.5464258742978332, 0.5974228782305115, 0.6039302861597244, null, 0.6336680396243464, 0.6070658220982994, 0.666646720500278, 0.5515864607938787, 0.5444549314814423, 0.4261036704477922, 0.6778057271641883, 0.6582604374852647, 0.609510821549565, 0.5362887385252653, 0.5258401873316552, 0.6861577219163468, 0.5724506836962696, 0.6740969230545263],
-                [0.3503018344415715, 0.4388350209377121, 0.33161022133298723, 0.6336680396243464, null, 0.36637913544977363, 0.4532180855548559, 0.4761814220500573, 0.3377234142894048, 0.44253667995588186, 0.39860283466285873, 0.5053802095972211, 0.31525013457099804, 0.3376562253455715, 0.3861866430185894, 0.39019790732972304, 0.4510121382841059, 0.3090091215062204],
-                [0.4230005378092867, 0.4540490168733181, 0.3329665848675937, 0.6070658220982994, 0.36637913544977363, null, 0.3618781665140953, 0.6051374042162494, 0.32089721306943564, 0.4367948708680962, 0.3380270197549471, 0.4533726934094313, 0.3398703723930372, 0.39752193176725314, 0.4124105501082387, 0.25798470964569864, 0.41035032314629993, 0.4968582368237605],
-                [0.4863485155695568, 0.37148702133310296, 0.3367787345666571, 0.666646720500278, 0.4532180855548559, 0.3618781665140953, null, 0.5729386564413299, 0.4230289139021274, 0.44448016513364796, 0.4946837022389591, 0.5467723161851978, 0.2367032571165325, 0.3915261192619617, 0.40573563905090193, 0.37775025105657645, 0.4341276081346991, 0.4777434533546433],
-                [0.5983049451587581, 0.5004857473478321, 0.499324226467843, 0.5515864607938787, 0.4761814220500573, 0.6051374042162494, 0.5729386564413299, null, 0.2718210049585379, 0.41078175962099517, 0.6970085676886735, 0.5302435232816561, 0.432106265731084, 0.3162704946403534, 0.35119712993074836, 0.6300683695342189, 0.44895216745540956, 0.4330751101207415],
-                [0.41180880993559044, 0.4644855811355807, 0.40278367258175907, 0.5444549314814423, 0.3377234142894048, 0.32089721306943564, 0.4230289139021274, 0.2718210049585379, null, 0.3268867508045089, 0.5728861642256088, 0.4131490476481907, 0.3006704569466019, 0.15798237451573638, 0.23650562969566025, 0.4039548152852821, 0.29613382157767876, 0.4485491203932599],
-                [0.4866471783296613, 0.43643317591885444, 0.42370393578529564, 0.4261036704477922, 0.44253667995588186, 0.4367948708680962, 0.44448016513364796, 0.41078175962099517, 0.3268867508045089, null, 0.5995335546195704, 0.43313003374594006, 0.4115129162769656, 0.309333569407627, 0.3071107607425475, 0.520575704799272, 0.2624178366115769, 0.512154864631396],
-                [0.49345450549582004, 0.47352087103526297, 0.31621405710417383, 0.6778057271641883, 0.39860283466285873, 0.3380270197549471, 0.4946837022389591, 0.6970085676886735, 0.5728861642256088, 0.5995335546195704, null, 0.3983657597336393, 0.508171728191654, 0.6488961740408352, 0.6131755346719445, 0.3885080562983241, 0.5229554783718748, 0.5187769293609845],
-                [0.5629886651259999, 0.5013060489336763, 0.35191288076294813, 0.6582604374852647, 0.5053802095972211, 0.4533726934094313, 0.5467723161851978, 0.5302435232816561, 0.4131490476481907, 0.43313003374594006, 0.3983657597336393, null, 0.4793728865086959, 0.49049547711451547, 0.5070280428131797, 0.5265776981777873, 0.30820554406845113, 0.558093206245327],
-                [0.4225133431218575, 0.35941877808102407, 0.21094056664636374, 0.609510821549565, 0.31525013457099804, 0.3398703723930372, 0.2367032571165325, 0.432106265731084, 0.3006704569466019, 0.4115129162769656, 0.508171728191654, 0.4793728865086959, null, 0.2870708493023597, 0.2874399665811216, 0.3514058119257989, 0.439544812811029, 0.3290360410818314],
-                [0.43420242170764367, 0.49469219371714224, 0.37617276973688074, 0.5362887385252653, 0.3376562253455715, 0.39752193176725314, 0.3915261192619617, 0.3162704946403534, 0.15798237451573638, 0.309333569407627, 0.6488961740408352, 0.49049547711451547, 0.2870708493023597, null, 0.2482169393532493, 0.4654969906286558, 0.37885881630121465, 0.40792676167639597],
-                [0.40539676369237787, 0.560405820669748, 0.45178108465900646, 0.5258401873316552, 0.3861866430185894, 0.4124105501082387, 0.40573563905090193, 0.35119712993074836, 0.23650562969566025, 0.3071107607425475, 0.6131755346719445, 0.5070280428131797, 0.2874399665811216, 0.2482169393532493, null, 0.41933792002010406, 0.37916441820928815, 0.4608389384466044],
-                [0.42054913272119254, 0.5256519392029635, 0.4139315624565799, 0.6861577219163468, 0.39019790732972304, 0.25798470964569864, 0.37775025105657645, 0.6300683695342189, 0.4039548152852821, 0.520575704799272, 0.3885080562983241, 0.5265776981777873, 0.3514058119257989, 0.4654969906286558, 0.41933792002010406, null, 0.5274186778062316, 0.4579856227030189],
-                [0.47544245309926814, 0.501440131518093, 0.3992154847969811, 0.5724506836962696, 0.4510121382841059, 0.41035032314629993, 0.4341276081346991, 0.44895216745540956, 0.29613382157767876, 0.2624178366115769, 0.5229554783718748, 0.30820554406845113, 0.439544812811029, 0.37885881630121465, 0.37916441820928815, 0.5274186778062316, null, 0.5619296970352552],
-                [0.5509965997324136, 0.4512197969390339, 0.34824284972628183, 0.6740969230545263, 0.3090091215062204, 0.4968582368237605, 0.4777434533546433, 0.4330751101207415, 0.4485491203932599, 0.512154864631396, 0.5187769293609845, 0.558093206245327, 0.3290360410818314, 0.40792676167639597, 0.4608389384466044, 0.4579856227030189, 0.5619296970352552, null]
-            ],
-            "legend": [
-                "/Users/user/__!make_face/bibi_train/item0.jpg",
-                "/Users/user/__!make_face/bibi_train/item1.jpg",
-                "/Users/user/__!make_face/bibi_train/item10.jpg",
-                "/Users/user/__!make_face/bibi_train/item11.jpg",
-                "/Users/user/__!make_face/bibi_train/item12.jpg",
-                "/Users/user/__!make_face/bibi_train/item13.jpg",
-                "/Users/user/__!make_face/bibi_train/item14.jpg",
-                "/Users/user/__!make_face/bibi_train/item16.jpg",
-                "/Users/user/__!make_face/bibi_train/item17.jpg",
-                "/Users/user/__!make_face/bibi_train/item18.jpg",
-                "/Users/user/__!make_face/bibi_train/item2.jpg",
-                "/Users/user/__!make_face/bibi_train/item3.jpg",
-                "/Users/user/__!make_face/bibi_train/item4.jpg",
-                "/Users/user/__!make_face/bibi_train/item5.jpg",
-                "/Users/user/__!make_face/bibi_train/item6.jpg",
-                "/Users/user/__!make_face/bibi_train/item7.jpg",
-                "/Users/user/__!make_face/bibi_train/item8.jpg",
-                "/Users/user/__!make_face/bibi_train/item9.jpg"
-            ],
-            "size": 18
-        };
+        // Глобальная переменная для хранения данных
+        let data = null;
+        let chartInstance = null; // Переменная для хранения экземпляра графика
+
+        // Функция для расчета рейтинга строки
+        function calculateRowRating(row) {
+            let greenCount = 0;
+            let yellowCount = 0;
+
+            for (let j = 0; j < row.length; j++) {
+                const value = row[j];
+                if (value === null) continue;
+
+                if (value <= 0.3) {
+                    greenCount++;
+                } else if (value <= 0.7) {
+                    yellowCount++;
+                }
+            }
+
+            return {
+                greenCount,
+                yellowCount,
+                rating: greenCount * 1000 + yellowCount * 50
+            };
+        }
+
         // Функция для получения цвета ячейки по значению
         function getCellColor(value) {
             if (value <= 0.3) {
@@ -199,22 +234,44 @@
                 return '#F44336'; // Красный
             }
         }
+        // Функция для генерации массива случайных цветов
+        function generateColors(count) {
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                // Генерируем случайный цвет в формате HSL для лучшего визуального различия
+                const hue = Math.floor(Math.random() * 360);
+                colors.push(`hsl(${hue}, 70%, 50%)`);
+            }
+            return colors;
+        }
         // Функция для создания матрицы
         function createMatrix() {
+            if (!data) return; // Проверка наличия данных
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
+            // Создаем заголовок таблицы динамически с добавлением столбца рейтинга
+            const thead = document.querySelector('.matrix-table thead tr');
+            thead.innerHTML = '<th class="header-cell">#</th><th class="header-cell">Рейтинг</th>'; // Добавлен столбец рейтинга
+            for (let i = 0; i < data.matrix[0].length; i++) {
+                const th = document.createElement('th');
+                th.className = 'header-cell';
+                th.textContent = i;
+                thead.appendChild(th);
+            }
+
             for (let i = 0; i < data.matrix.length; i++) {
                 const row = document.createElement('tr');
                 row.className = 'matrix-row';
-                let rowHTML = `<td class="header-cell">${i}</td>`;
+                const ratingInfo = calculateRowRating(data.matrix[i]);
+                // Добавляем ячейку с рейтингом и подсказкой о количестве зеленых и желтых ячеек
+                let rowHTML = `<td class="header-cell">${i}</td><td class="header-cell rating-cell" title="Зеленых: ${ratingInfo.greenCount}, Желтых: ${ratingInfo.yellowCount}">${ratingInfo.rating}</td>`;
+
                 for (let j = 0; j < data.matrix[i].length; j++) {
                     const value = data.matrix[i][j];
                     if (value === null) {
                         rowHTML += `<td class="matrix-cell bg-secondary text-white" data-row="${i}" data-col="${j}">-</td>`;
                     } else {
-                        // Округляем значение до 3 знаков после запятой
                         const formattedValue = value.toFixed(3);
-                        // Получаем цвет в зависимости от значения
                         const bgColor = getCellColor(value);
                         rowHTML += `<td class="matrix-cell" style="background-color: ${bgColor};" data-row="${i}" data-col="${j}">${formattedValue}</td>`;
                     }
@@ -222,11 +279,11 @@
                 row.innerHTML = rowHTML;
                 tableBody.appendChild(row);
             }
-            // Добавляем обработчики кликов
+
+            // Добавляем обработчики кликов на ячейки (только для отображения изображений)
             document.querySelectorAll('.matrix-cell').forEach(cell => {
                 cell.addEventListener('click', function() {
                     const row = this.getAttribute('data-row');
-                    const col = this.getAttribute('data-col');
                     // Удалить выделение с предыдущих ячеек
                     document.querySelectorAll('.matrix-cell').forEach(c => {
                         c.classList.remove('selected-cell');
@@ -235,94 +292,99 @@
                     this.classList.add('selected-cell');
                     // Показать изображения для выбранной строки
                     showImages(parseInt(row));
-                    // Показать график для выбранной строки
-                    drawChartForSelectedRow(parseInt(row));
+                    // Показать кнопку сброса
+                    document.getElementById('resetButton').style.display = 'inline-block';
                 });
             });
         }
         // Функция для отображения изображений по схожести
         function showImages(rowIndex) {
+            if (!data) return; // Проверка наличия данных
             const imageGrid = document.getElementById('imageGrid');
             imageGrid.innerHTML = '';
-            // Получить веса для выбранной строки
             const weights = data.matrix[rowIndex];
-            // Создать массив объектов с путями и весами
             const imageWeights = weights.map((weight, index) => ({
-                path: data.legend[index], // Используем путь из legend
+                path: data.legend[index],
                 weight: weight,
                 index: index
             }));
-            // Отфильтровать null значения и отсортировать по возрастанию веса (меньший вес первым)
             let sortedImages = imageWeights
                 .filter(item => item.weight !== null)
                 .sort((a, b) => a.weight - b.weight);
-            // Добавить диагональный элемент в начало списка
             const diagonalElement = {
-                path: data.legend[rowIndex], // Используем путь из legend для диагонального элемента
+                path: data.legend[rowIndex],
                 weight: data.matrix[rowIndex][rowIndex] || 0,
                 index: rowIndex
             };
-            // Удалить диагональный элемент из отсортированного списка если он там есть
             sortedImages = sortedImages.filter(item => item.index !== rowIndex);
-            // Добавить диагональный элемент в начало
             sortedImages.unshift(diagonalElement);
-            // Добавить изображения в строку без пробелов
             sortedImages.forEach(item => {
                 const container = document.createElement('div');
                 container.className = 'image-container';
                 container.innerHTML = `
-                    <img src="${item.path}" alt="Item ${item.index}" >
-                    <div class="weight">${item.weight.toFixed(3)}</div>
+                    <img src="${item.path}" alt="Item ${item.index}" onerror="this.onerror=null; this.src='image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM2NjYiPk5PVCBGT1VORDwvdGV4dD48L3N2Zz4=';">
+                    <div class="weight">${item.weight !== null ? item.weight.toFixed(3) : 'N/A'}</div>
                     <div class="index">${item.index}</div>
                 `;
                 imageGrid.appendChild(container);
             });
         }
+        // Функция для рисования графика для ВСЕХ строк
+        function drawChartForAllRows() {
+            if (!data) return; // Проверка наличия данных
 
-        // --- НОВЫЙ КОД ДЛЯ ГРАФИКА ---
-        let chartInstance = null; // Переменная для хранения экземпляра графика
-
-        function drawChartForSelectedRow(rowIndex) {
+            // Устанавливаем высоту контейнера графика пропорционально количеству строк
+            // Минимальная высота 400px, затем по 25px на каждую строку
             const chartContainer = document.getElementById('chartContainer');
-            const chartRowIndexSpan = document.getElementById('chartRowIndex');
+            const chartHeight = Math.max(400, data.matrix.length * 25);
+            chartContainer.style.height = `${chartHeight}px`;
+
             const ctx = document.getElementById('differencesChart').getContext('2d');
+            const colorLegendDiv = document.getElementById('colorLegend');
+            colorLegendDiv.innerHTML = ''; // Очищаем предыдущую легенду
 
-            // Обновляем номер строки в заголовке графика
-            chartRowIndexSpan.textContent = rowIndex;
-
-            // Получаем строку данных
-            const row = data.matrix[rowIndex];
-            // Фильтруем null и сортируем по возрастанию
-            const sortedValues = row.filter(val => val !== null).sort((a, b) => a - b);
-
-            // Рассчитываем разницы
-            const differences = [];
-            for (let i = 1; i < sortedValues.length; i++) {
-                differences.push(sortedValues[i] - sortedValues[i - 1]);
-            }
-
-            // Подготавливаем данные для графика
-            const chartData = {
-                labels: Array.from({length: differences.length}, (_, i) => i), // Индексы разниц
-                datasets: [{
-                    label: `Разницы для строки ${rowIndex}`,
+            // Генерируем цвета для каждой строки
+            const colors = generateColors(data.matrix.length);
+            const legendItems = [];
+            // Подготавливаем массив datasets для Chart.js
+            const datasets = [];
+            for (let rowIndex = 0; rowIndex < data.matrix.length; rowIndex++) {
+                const row = data.matrix[rowIndex];
+                const sortedValues = row.filter(val => val !== null).sort((a, b) => a - b);
+                const differences = [];
+                for (let i = 1; i < sortedValues.length; i++) {
+                    differences.push(sortedValues[i] - sortedValues[i - 1]);
+                }
+                // Создаем dataset для текущей строки
+                datasets.push({
+                    label: `Строка ${rowIndex}`,
                     data: differences,
-                    borderColor: 'rgba(54, 162, 235, 1)', // Синий цвет линии
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)', // Светло-синий цвет заливки
-                    pointBackgroundColor: 'rgba(54, 162, 235, 1)', // Цвет точек
-                    pointBorderColor: '#fff', // Цвет границы точек
-                    pointRadius: 3, // Радиус точек
-                    pointHoverRadius: 6, // Радиус точек при наведении
-                    fill: true, // Включаем заливку под линией
-                    tension: 0.2 // Сглаживание линий
-                }]
+                    borderColor: colors[rowIndex],
+                    backgroundColor: colors[rowIndex].replace(')', ', 0.1)').replace('hsl', 'hsla'), // Полупрозрачный фон
+                    pointBackgroundColor: colors[rowIndex],
+                    pointBorderColor: '#fff',
+                    pointRadius: 2, // Уменьшен радиус точек
+                    pointHoverRadius: 5,
+                    fill: false, // Отключаем заливку для линий
+                    tension: 0.1, // Немного сглаживания
+                    spanGaps: true // Пропускать null значения
+                });
+                // Добавляем элемент в легенду
+                legendItems.push(`<span class="color-legend-item"><span class="color-box" style="background-color: ${colors[rowIndex]};"></span> Строка ${rowIndex}</span>`);
+            }
+            // Отображаем легенду
+            colorLegendDiv.innerHTML = legendItems.join(' ');
+            // Метки по оси X - индексы разниц (берем максимальную длину)
+            const maxLength = Math.max(...datasets.map(d => d.data.length));
+            const labels = Array.from({ length: maxLength }, (_, i) => i);
+            const chartData = {
+                labels: labels,
+                datasets: datasets
             };
-
             // Уничтожаем предыдущий график, если он существует
             if (chartInstance) {
                 chartInstance.destroy();
             }
-
             // Создаем график
             chartInstance = new Chart(ctx, {
                 type: 'line',
@@ -332,7 +394,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'top',
+                            display: false, // Скрываем стандартную легенду
                         },
                         tooltip: {
                             mode: 'index',
@@ -361,14 +423,10 @@
                     }
                 }
             });
-
-            // Показываем контейнер графика и кнопку сброса
+            // Показываем контейнер графика
             chartContainer.style.display = 'block';
-            document.getElementById('resetButton').style.display = 'inline-block';
         }
-        // --- КОНЕЦ НОВОГО КОДА ---
-
-        // --- Функция сброса ---
+        // Функция сброса
         function resetSelection() {
              // Удалить выделение с ячеек
              document.querySelectorAll('.matrix-cell').forEach(c => {
@@ -376,23 +434,70 @@
              });
              // Очистить строку изображений
              document.getElementById('imageGrid').innerHTML = '';
-             // Скрыть график
-             const chartContainer = document.getElementById('chartContainer');
-             chartContainer.style.display = 'none';
-             if (chartInstance) {
-                 chartInstance.destroy();
-                 chartInstance = null;
-             }
              // Скрыть кнопку сброса
              document.getElementById('resetButton').style.display = 'none';
          }
-        // --- Конец функции сброса ---
-
+        // Функция обработки загруженного файла
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    if (jsonData.matrix && jsonData.legend && typeof jsonData.size === 'number') {
+                        data = jsonData;
+                        document.getElementById('dropZone').style.display = 'none';
+                        document.getElementById('mainContent').style.display = 'block';
+                        createMatrix();
+                        // Отображаем график для всех строк по умолчанию
+                        drawChartForAllRows();
+                        // Добавляем обработчик события для кнопки сброса (если еще не добавлен)
+                        if (!document.getElementById('resetButton').dataset.listenerAdded) {
+                            document.getElementById('resetButton').addEventListener('click', resetSelection);
+                            document.getElementById('resetButton').dataset.listenerAdded = 'true';
+                        }
+                    } else {
+                        alert('Загруженный файл имеет неверный формат данных.');
+                    }
+                } catch (error) {
+                    console.error('Ошибка при парсинге JSON:', error);
+                    alert('Ошибка при чтении файла. Убедитесь, что это корректный JSON файл.');
+                }
+            };
+            reader.readAsText(file);
+        }
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
-            createMatrix();
-            // Добавляем обработчик события для кнопки сброса
-            document.getElementById('resetButton').addEventListener('click', resetSelection);
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.add('hover');
+                }, false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropZone.classList.remove('hover');
+                }, false);
+            });
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length) {
+                    handleFile(files[0]);
+                }
+            }, false);
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFile(e.target.files[0]);
+                }
+            });
         });
     </script>
 </body>
