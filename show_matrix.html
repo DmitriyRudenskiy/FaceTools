@@ -113,7 +113,7 @@
         .chart-container {
             margin: 20px 0 40px 0; /* 20px сверху, 40px снизу */
             position: relative;
-            height: auto; /* Динамическая высота вместо фиксированной */
+            height: 500px; /* Фиксированная высота */
         }
         /* Показываем график по умолчанию */
         .chart-container {
@@ -163,7 +163,7 @@
         <!-- Основной контент (изначально скрыт) -->
         <div id="mainContent">
             <!-- Контейнер для графика, отображается по умолчанию -->
-            <div class="row" style="height: 500px;">
+            <div class="row">
                 <div class="col-12">
                     <div class="chart-container" id="chartContainer">
                         <h3>График разниц для всех строк</h3>
@@ -289,7 +289,6 @@
             // Устанавливаем обработчики кликов
             setupClickHandlers();
         }
-        
         function setupClickHandlers() {
             // Добавляем обработчики кликов на строки
             document.querySelectorAll('.matrix-row').forEach(row => {
@@ -320,7 +319,6 @@
                 cell.addEventListener('click', cellClickHandler);
             });
         }
-        
         function cellClickHandler(e) {
             e.stopPropagation(); // Останавливаем всплытие события, чтобы не сработал обработчик строки
             const row = this.getAttribute('data-row');
@@ -335,7 +333,6 @@
                 selectRow(rowIndex);
             }
         }
-        
         // Функция для обработки выбора строки
         function selectRow(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length || currentSelectedRow === rowIndex) return;
@@ -351,13 +348,10 @@
             // Показать кнопку сброса
             document.getElementById('resetButton').style.display = 'inline-block';
         }
-        
         function reorderTableColumns(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
             const rowValues = data.matrix[rowIndex].map(value => value === null ? -1 : value);
-
             console.log(rowValues);
-
             const valueIndexPairs = rowValues.map((value, index) => ({ value, index }))
                                              .filter(item => item.value !== null)
                                              .sort((a, b) => a.value - b.value);
@@ -394,33 +388,44 @@
             // Обновляем обработчики кликов
             setupClickHandlers();
         }
-        
         // Функция для отображения изображений по схожести
         function showImages(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
             const imageGrid = document.getElementById('imageGrid');
             imageGrid.innerHTML = '';
             const weights = data.matrix[rowIndex];
+            // Используем data.legend для получения путей к изображениям
             const imageWeights = weights.map((weight, index) => ({
-                path: data.legend[index],
+                path: data.legend[index], // Используем путь из legend
                 weight: weight,
                 index: index
             }));
-            let sortedImages = imageWeights
-                .filter(item => item.weight !== null)
-                .sort((a, b) => a.weight - b.weight); // Сортировка от меньшего к большему
-            sortedImages.forEach(item => {
+            // Получаем изображение строки
+            const rowImage = imageWeights[rowIndex];
+            // Фильтруем и сортируем оставшиеся изображения
+            const otherImages = imageWeights.filter((_, index) => index !== rowIndex)
+                                             .sort((a, b) => a.weight - b.weight);
+            // Добавляем изображение строки первым
+            const containerForRowImage = document.createElement('div');
+            containerForRowImage.className = 'image-container';
+            containerForRowImage.innerHTML = `
+                <img src="${rowImage.path}" alt="Item ${rowImage.index}">
+                <div class="weight">${rowImage.weight !== null ? rowImage.weight.toFixed(3) : 'N/A'}</div>
+                <div class="index">${rowImage.index}</div>
+            `;
+            imageGrid.appendChild(containerForRowImage);
+            // Добавляем остальные изображения
+            otherImages.forEach(item => {
                 const container = document.createElement('div');
                 container.className = 'image-container';
                 container.innerHTML = `
-                    <img src="${item.path}" alt="Item ${item.index}" onerror="this.onerror=null; this.src='image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM2NjYiPk5PVCBGT1VORDwvdGV4dD48L3N2Zz4=';">
+                    <img src="${item.path}" alt="Item ${item.index}">
                     <div class="weight">${item.weight !== null ? item.weight.toFixed(3) : 'N/A'}</div>
                     <div class="index">${item.index}</div>
                 `;
                 imageGrid.appendChild(container);
             });
         }
-        
         // Функция для рисования графика для ОДНОЙ строки
         function drawChartForSingleRow(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
@@ -430,11 +435,8 @@
             for (let i = 1; i < sortedValues.length; i++) {
                 differences.push(sortedValues[i] - sortedValues[i - 1]);
             }
-            // Устанавливаем высоту контейнера графика (фиксированная для одной линии)
-            const chartContainer = document.getElementById('chartContainer');
-            chartContainer.style.height = `400px`; // Фиксированная высота для одной строки
             // Обновляем заголовок графика
-            const chartTitle = chartContainer.querySelector('h3');
+            const chartTitle = document.getElementById('chartContainer').querySelector('h3');
             if (chartTitle) {
                 chartTitle.textContent = `График разниц для строки ${rowIndex}`;
             }
@@ -504,22 +506,16 @@
                 }
             });
             // Показываем контейнер графика
-            chartContainer.style.display = 'block';
+            document.getElementById('chartContainer').style.display = 'block';
         }
-        
         // Функция для рисования графика для ВСЕХ строк (исходная)
         function drawChartForAllRows() {
             if (!data) return; // Проверка наличия данных
-            // Устанавливаем высоту контейнера графика пропорционально количеству строк
-            // Минимальная высота 400px, затем по 25px на каждую строку
-            const chartContainer = document.getElementById('chartContainer');
-            const chartHeight = Math.max(150, data.matrix.length * 25);
-            chartContainer.style.height = `${chartHeight}px`;
-             // Обновляем заголовок графика
-             const chartTitle = chartContainer.querySelector('h3');
-             if (chartTitle) {
-                 chartTitle.textContent = `График разниц для всех строк`;
-             }
+            // Обновляем заголовок графика
+            const chartTitle = document.getElementById('chartContainer').querySelector('h3');
+            if (chartTitle) {
+                chartTitle.textContent = `График разниц для всех строк`;
+            }
             const ctx = document.getElementById('differencesChart').getContext('2d');
             const colorLegendDiv = document.getElementById('colorLegend');
             colorLegendDiv.innerHTML = ''; // Очищаем предыдущую легенду
@@ -604,9 +600,8 @@
                 }
             });
             // Показываем контейнер графика
-            chartContainer.style.display = 'block';
+            document.getElementById('chartContainer').style.display = 'block';
         }
-        
         // Функция для восстановления исходного порядка столбцов
         function restoreOriginalColumnOrder() {
             if (!data) return;
@@ -622,18 +617,15 @@
                 th.textContent = i;
                 thead.appendChild(th);
             }
-            
             const tbody = document.getElementById('tableBody');
             for (let i = 0; i < data.matrix.length; i++) {
                 const rowElement = tbody.children[i];
                 if (!rowElement) continue;
                 const cells = Array.from(rowElement.children);
                 const newCellsHTML = [];
-                
                 // Сохраняем первый столбец (#) и столбец рейтинга
                 newCellsHTML.push(cells[0].outerHTML); // #
                 newCellsHTML.push(cells[1].outerHTML); // Рейтинг
-                
                 // Добавляем ячейки в исходном порядке
                 for (let j = 0; j < data.matrix[i].length; j++) {
                     const cell = cells.find(c => c.getAttribute('data-col') === String(j));
@@ -641,14 +633,11 @@
                         newCellsHTML.push(cell.outerHTML);
                     }
                 }
-                
                 rowElement.innerHTML = newCellsHTML.join('');
             }
-            
             // Восстанавливаем обработчики кликов
             setupClickHandlers();
         }
-        
         // Функция сброса
         function resetSelection() {
             // Удалить выделение с ячеек
@@ -668,7 +657,6 @@
             // Отображаем график для всех строк по умолчанию
             drawChartForAllRows();
         }
-        
         // Функция обработки загруженного файла
         function handleFile(file) {
             const reader = new FileReader();
@@ -697,7 +685,6 @@
             };
             reader.readAsText(file);
         }
-        
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
             const dropZone = document.getElementById('dropZone');

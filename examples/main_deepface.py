@@ -73,6 +73,9 @@ def main():
     # Получаем список всех графических файлов из директории
     image_paths = get_image_files_from_directory(images_directory)
 
+    # Склеиваем полный путь к каждому файлу
+    image_paths = [os.path.join(os.path.abspath(images_directory), os.path.basename(path)) if not os.path.isabs(path) else os.path.abspath(path) for path in image_paths]
+
     # Проверяем, что файлы найдены
     if not image_paths:
         print(f"Не найдено графических файлов в директории: {images_directory}")
