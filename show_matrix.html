@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Матрица схожести изображений</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Подключаем Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Стили для зоны перетаскивания файла */
         #dropZone {
             border: 2px dashed #ccc;
             border-radius: 10px;
@@ -27,6 +29,7 @@
             font-size: 1.2rem;
             color: #ccc;
         }
+        /* Стили для основного контента (изначально скрыты) */
         #mainContent {
             display: none;
         }
@@ -78,16 +81,17 @@
             font-weight: bold;
         }
         .table-container {
-            max-height: 500px;
+            max-height: 500px; /* Увеличена высота */
             overflow: auto;
         }
         .header-cell {
             background-color: #f8f9fa;
             font-weight: bold;
-            position: sticky;
+            position: sticky; /* Закрепляем заголовки */
             top: 0;
             z-index: 10;
         }
+        /* Закрепляем первый столбец */
         .matrix-row td:first-child {
             position: sticky;
             left: 0;
@@ -100,23 +104,26 @@
             border-radius: 4px;
             padding: 10px;
             margin-bottom: 20px;
-            overflow-x: auto;
-            display: none;
+            overflow-x: auto; /* Добавляем горизонтальный скролл */
+            display: none; /* Скрываем по умолчанию */
         }
         .matrix-row:hover {
             background-color: #f8f9fa !important;
         }
         .chart-container {
-            margin: 20px 0 40px 0;
+            margin: 20px 0 40px 0; /* 20px сверху, 40px снизу */
             position: relative;
-            height: auto;
+            height: auto; /* Динамическая высота вместо фиксированной */
         }
+        /* Показываем график по умолчанию */
         .chart-container {
             display: block;
         }
+        /* Скрытие кнопки сброса по умолчанию */
         #resetButton {
             display: none;
         }
+        /* Генерация случайных цветов для графика */
         .color-legend-item {
             display: inline-block;
             margin-right: 10px;
@@ -128,6 +135,7 @@
             margin-right: 4px;
             border: 1px solid #ccc;
         }
+        /* Стили для нового столбца рейтинга */
         .rating-cell {
             font-weight: bold;
             color: #0d6efd;
@@ -135,27 +143,31 @@
             text-align: right !important;
             padding-right: 8px !important;
         }
+        /* Стили для переставленных заголовков */
         .reordered-header {
             writing-mode: vertical-lr;
-            transform: rotate(180deg);
-            white-space: nowrap;
-            padding: 5px 2px;
-            min-width: 20px;
+            transform: rotate(180deg); /* Поворачиваем текст для лучшей читаемости */
+            white-space: nowrap; /* Предотвращаем перенос строк */
+            padding: 5px 2px; /* Корректируем отступы */
+            min-width: 20px; /* Минимальная ширина для вертикального текста */
         }
     </style>
 </head>
 <body>
     <div class="container-fluid mt-4">
+        <!-- Область загрузки файла -->
         <div id="dropZone">
             <p>Перетащите JSON файл с данными сюда или кликните для выбора</p>
             <input type="file" id="fileInput" accept=".json" style="display: none;">
         </div>
+        <!-- Основной контент (изначально скрыт) -->
         <div id="mainContent">
+            <!-- Контейнер для графика, отображается по умолчанию -->
             <div class="row" style="height: 500px;">
                 <div class="col-12">
                     <div class="chart-container" id="chartContainer">
                         <h3>График разниц для всех строк</h3>
-                        <div id="colorLegend" class="mb-2"></div>
+                        <div id="colorLegend" class="mb-2"></div> <!-- Легенда цветов -->
                         <canvas id="differencesChart"></canvas>
                     </div>
                 </div>
@@ -174,6 +186,7 @@
                             <thead>
                                 <tr>
                                     <th class="header-cell">#</th>
+                                    <!-- Динамически генерируемые заголовки -->
                                 </tr>
                             </thead>
                             <tbody id="tableBody">
@@ -182,6 +195,7 @@
                     </div>
                 </div>
             </div>
+            <!-- Кнопка сброса, изначально скрыта -->
             <div class="row mb-4">
                 <div class="col-12 text-center">
                     <button id="resetButton" class="btn btn-secondary">Сбросить выбор</button>
@@ -190,19 +204,22 @@
         </div>
     </div>
     <script>
+        // Глобальная переменная для хранения данных
         let data = null;
-        let chartInstance = null;
-        let currentSelectedRow = null;
-
+        let chartInstance = null; // Переменная для хранения экземпляра графика
+        let currentSelectedRow = null; // Переменная для отслеживания выбранной строки
+        // Функция для расчета рейтинга строки
         function calculateRowRating(row) {
             let greenCount = 0;
             let yellowCount = 0;
             for (let j = 0; j < row.length; j++) {
                 const value = row[j];
                 if (value === null) continue;
-                if (value <= 0.3) {
+                // Нормализуем значение к диапазону [0, 1]
+                const normalizedValue = Math.min(1, Math.max(0, value));
+                if (normalizedValue <= 0.3) {
                     greenCount++;
-                } else if (value <= 0.7) {
+                } else if (normalizedValue <= 0.7) {
                     yellowCount++;
                 }
             }
@@ -212,32 +229,37 @@
                 rating: greenCount * 1000 + yellowCount * 50
             };
         }
-
+        // Функция для получения цвета ячейки по значению
         function getCellColor(value) {
-            if (value <= 0.3) {
-                return '#4CAF50';
-            } else if (value <= 0.7) {
-                return '#FFEB3B';
+            // Нормализуем значение к диапазону [0, 1]
+            if (value === null) return '#6c757d'; // Серый для null значений
+            const normalizedValue = Math.min(1, Math.max(0, value));
+            if (normalizedValue <= 0.3) {
+                return '#4CAF50'; // Зеленый
+            } else if (normalizedValue <= 0.7) {
+                return '#FFEB3B'; // Желтый
             } else {
-                return '#F44336';
+                return '#F44336'; // Красный
             }
         }
-
+        // Функция для генерации массива случайных цветов
         function generateColors(count) {
             const colors = [];
             for (let i = 0; i < count; i++) {
+                // Генерируем случайный цвет в формате HSL для лучшего визуального различия
                 const hue = Math.floor(Math.random() * 360);
                 colors.push(`hsl(${hue}, 70%, 50%)`);
             }
             return colors;
         }
-
+        // Функция для создания матрицы
         function createMatrix() {
-            if (!data) return;
+            if (!data) return; // Проверка наличия данных
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
+            // Создаем заголовок таблицы динамически с добавлением столбца рейтинга
             const thead = document.querySelector('.matrix-table thead tr');
-            thead.innerHTML = '<th class="header-cell">#</th><th class="header-cell">Рейтинг</th>';
+            thead.innerHTML = '<th class="header-cell">#</th><th class="header-cell">Рейтинг</th>'; // Добавлен столбец рейтинга
             for (let i = 0; i < data.matrix[0].length; i++) {
                 const th = document.createElement('th');
                 th.className = 'header-cell';
@@ -247,7 +269,9 @@
             for (let i = 0; i < data.matrix.length; i++) {
                 const row = document.createElement('tr');
                 row.className = 'matrix-row';
+                row.setAttribute('data-row', i); // Добавляем атрибут для правильного определения индекса
                 const ratingInfo = calculateRowRating(data.matrix[i]);
+                // Добавляем ячейку с рейтингом и подсказкой о количестве зеленых и желтых ячеек
                 let rowHTML = `<td class="header-cell">${i}</td><td class="header-cell rating-cell" title="Зеленых: ${ratingInfo.greenCount}, Желтых: ${ratingInfo.yellowCount}">${ratingInfo.rating}</td>`;
                 for (let j = 0; j < data.matrix[i].length; j++) {
                     const value = data.matrix[i][j];
@@ -262,63 +286,88 @@
                 row.innerHTML = rowHTML;
                 tableBody.appendChild(row);
             }
+            // Устанавливаем обработчики кликов
+            setupClickHandlers();
+        }
+        
+        function setupClickHandlers() {
+            // Добавляем обработчики кликов на строки
             document.querySelectorAll('.matrix-row').forEach(row => {
                 row.addEventListener('click', function(e) {
+                    // Проверяем, кликнули ли мы на саму строку или на дочерний элемент (ячейку)
+                    // Это позволяет избежать двойного срабатывания
                     if (e.target.classList.contains('matrix-cell')) {
                         return;
                     }
-                    const rowIndex = parseInt(this.querySelector('td').textContent);
-                    if (!isNaN(rowIndex)) {
-                        document.querySelectorAll('.matrix-cell').forEach(c => {
-                            c.classList.remove('selected-cell');
-                        });
+                    const rowIndex = parseInt(this.getAttribute('data-row'));
+                    if (!isNaN(rowIndex) && rowIndex >= 0 && rowIndex < data.matrix.length) {
+                         // Удалить выделение с предыдущих ячеек
+                         document.querySelectorAll('.matrix-cell').forEach(c => {
+                             c.classList.remove('selected-cell');
+                         });
+                        // Выделить первую ячейку строки
                         const firstCell = this.querySelector('.matrix-cell');
                         if (firstCell) {
-                            firstCell.classList.add('selected-cell');
+                             firstCell.classList.add('selected-cell');
                         }
                         selectRow(rowIndex);
                     }
                 });
             });
+            // Добавляем обработчики кликов на ячейки (для выделения и отображения изображений)
             document.querySelectorAll('.matrix-cell').forEach(cell => {
-                cell.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const row = this.getAttribute('data-row');
-                    const rowIndex = parseInt(row);
-                    document.querySelectorAll('.matrix-cell').forEach(c => {
-                        c.classList.remove('selected-cell');
-                    });
-                    this.classList.add('selected-cell');
-                    selectRow(rowIndex);
-                });
+                cell.removeEventListener('click', cellClickHandler);
+                cell.addEventListener('click', cellClickHandler);
             });
         }
-
+        
+        function cellClickHandler(e) {
+            e.stopPropagation(); // Останавливаем всплытие события, чтобы не сработал обработчик строки
+            const row = this.getAttribute('data-row');
+            const rowIndex = parseInt(row);
+            if (!isNaN(rowIndex) && rowIndex >= 0 && rowIndex < data.matrix.length) {
+                // Удалить выделение с предыдущих ячеек
+                document.querySelectorAll('.matrix-cell').forEach(c => {
+                    c.classList.remove('selected-cell');
+                });
+                // Выделить текущую ячейку
+                this.classList.add('selected-cell');
+                selectRow(rowIndex);
+            }
+        }
+        
+        // Функция для обработки выбора строки
         function selectRow(rowIndex) {
-            if (!data || isNaN(rowIndex)) return;
+            if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length || currentSelectedRow === rowIndex) return;
             currentSelectedRow = rowIndex;
+            // Показать изображения для выбранной строки
             showImages(rowIndex);
+            // Переупорядочить таблицу для выбранной строки
             reorderTableColumns(rowIndex);
+            // Перерисовать график для выбранной строки
             drawChartForSingleRow(rowIndex);
+            // Показать блок изображений
             document.getElementById('imageDisplay').style.display = 'block';
+            // Показать кнопку сброса
             document.getElementById('resetButton').style.display = 'inline-block';
         }
-
+        
         function reorderTableColumns(rowIndex) {
-            if (!data || isNaN(rowIndex) || rowIndex >= data.matrix.length) return;
+            if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
             const rowValues = data.matrix[rowIndex];
             const valueIndexPairs = rowValues.map((value, index) => ({ value, index }))
                                              .filter(item => item.value !== null)
                                              .sort((a, b) => a.value - b.value);
             const thead = document.querySelector('.matrix-table thead tr');
-            while (thead.children.length > 3) {
+            // Исправлено: удаляем только лишние колонки (сохраняем первые 2)
+            while (thead.children.length > 2) {
                 thead.removeChild(thead.lastChild);
             }
             valueIndexPairs.forEach(pair => {
                 const th = document.createElement('th');
                 th.className = 'header-cell reordered-header';
                 th.textContent = pair.index;
-                th.title = `Оригинальный индекс: ${pair.index}, Значение: ${pair.value.toFixed(3)}`;
+                th.title = `Оригинальный индекс: ${pair.index}, Значение: ${pair.value !== null ? pair.value.toFixed(3) : 'N/A'}`;
                 thead.appendChild(th);
             });
             const tbody = document.getElementById('tableBody');
@@ -327,33 +376,25 @@
                 if (!rowElement) continue;
                 const originalCells = Array.from(rowElement.children);
                 const newCellsHTML = [];
-                newCellsHTML.push(originalCells[0].outerHTML);
-                newCellsHTML.push(originalCells[1].outerHTML);
+                // Сохраняем первый столбец (#) и столбец рейтинга
+                newCellsHTML.push(originalCells[0].outerHTML); // #
+                newCellsHTML.push(originalCells[1].outerHTML); // Рейтинг
                 valueIndexPairs.forEach(pair => {
                     const originalIndex = pair.index;
-                    const cellToMove = originalCells.find(cell => cell.getAttribute('data-col') == originalIndex);
+                    const cellToMove = originalCells.find(cell => cell.getAttribute('data-col') === String(originalIndex));
                     if (cellToMove) {
                         newCellsHTML.push(cellToMove.outerHTML);
                     }
                 });
                 rowElement.innerHTML = newCellsHTML.join('');
             }
-            document.querySelectorAll('.matrix-cell').forEach(cell => {
-                cell.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const row = this.getAttribute('data-row');
-                    const rowIndex = parseInt(row);
-                    document.querySelectorAll('.matrix-cell').forEach(c => {
-                        c.classList.remove('selected-cell');
-                    });
-                    this.classList.add('selected-cell');
-                    selectRow(rowIndex);
-                });
-            });
+            // Обновляем обработчики кликов
+            setupClickHandlers();
         }
-
+        
+        // Функция для отображения изображений по схожести
         function showImages(rowIndex) {
-            if (!data) return;
+            if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
             const imageGrid = document.getElementById('imageGrid');
             imageGrid.innerHTML = '';
             const weights = data.matrix[rowIndex];
@@ -364,42 +405,46 @@
             }));
             let sortedImages = imageWeights
                 .filter(item => item.weight !== null)
-                .sort((a, b) => a.weight - b.weight);
+                .sort((a, b) => a.weight - b.weight); // Сортировка от меньшего к большему
             sortedImages.forEach(item => {
                 const container = document.createElement('div');
                 container.className = 'image-container';
                 container.innerHTML = `
-                    <img src="${item.path}" alt="Item ${item.index}" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluaW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM2NjYiPk5PVCBGT1VORDwvdGV4dD48L3N2Zz4=';">
+                    <img src="${item.path}" alt="Item ${item.index}" onerror="this.onerror=null; this.src='image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iI2NjYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM2NjYiPk5PVCBGT1VORDwvdGV4dD48L3N2Zz4=';">
                     <div class="weight">${item.weight !== null ? item.weight.toFixed(3) : 'N/A'}</div>
                     <div class="index">${item.index}</div>
                 `;
                 imageGrid.appendChild(container);
             });
         }
-
+        
+        // Функция для рисования графика для ОДНОЙ строки
         function drawChartForSingleRow(rowIndex) {
-            if (!data || isNaN(rowIndex) || rowIndex >= data.matrix.length) return;
+            if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
             const row = data.matrix[rowIndex];
             const sortedValues = row.filter(val => val !== null).sort((a, b) => a - b);
             const differences = [];
             for (let i = 1; i < sortedValues.length; i++) {
                 differences.push(sortedValues[i] - sortedValues[i - 1]);
             }
+            // Устанавливаем высоту контейнера графика (фиксированная для одной линии)
             const chartContainer = document.getElementById('chartContainer');
-            chartContainer.style.height = `400px`;
+            chartContainer.style.height = `400px`; // Фиксированная высота для одной строки
+            // Обновляем заголовок графика
             const chartTitle = chartContainer.querySelector('h3');
             if (chartTitle) {
                 chartTitle.textContent = `График разниц для строки ${rowIndex}`;
             }
             const ctx = document.getElementById('differencesChart').getContext('2d');
             const colorLegendDiv = document.getElementById('colorLegend');
-            colorLegendDiv.innerHTML = '';
-            const color = generateColors(1)[0];
+            colorLegendDiv.innerHTML = ''; // Очищаем предыдущую легенду
+            // Генерируем цвет для выбранной строки
+            const color = generateColors(1)[0]; // Берем первый цвет из массива из одного цвета
             const dataset = {
                 label: `Строка ${rowIndex}`,
                 data: differences,
                 borderColor: color,
-                backgroundColor: color.replace(')', ', 0.1)').replace('hsl', 'hsla'),
+                backgroundColor: color.replace(')', ', 0.1)').replace('hsl', 'hsla'), // Полупрозрачный фон
                 pointBackgroundColor: color,
                 pointBorderColor: '#fff',
                 pointRadius: 3,
@@ -408,15 +453,18 @@
                 tension: 0.2,
                 spanGaps: true
             };
+            // Отображаем легенду для одной строки
             colorLegendDiv.innerHTML = `<span class="color-legend-item"><span class="color-box" style="background-color: ${color};"></span> Строка ${rowIndex}</span>`;
             const labels = Array.from({ length: differences.length }, (_, i) => i);
             const chartData = {
                 labels: labels,
                 datasets: [dataset]
             };
+            // Уничтожаем предыдущий график, если он существует
             if (chartInstance) {
                 chartInstance.destroy();
             }
+            // Создаем график
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: chartData,
@@ -425,7 +473,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: false,
+                            display: false, // Скрываем стандартную легенду
                         },
                         tooltip: {
                             mode: 'index',
@@ -452,23 +500,30 @@
                     }
                 }
             });
+            // Показываем контейнер графика
             chartContainer.style.display = 'block';
         }
-
+        
+        // Функция для рисования графика для ВСЕХ строк (исходная)
         function drawChartForAllRows() {
-            if (!data) return;
+            if (!data) return; // Проверка наличия данных
+            // Устанавливаем высоту контейнера графика пропорционально количеству строк
+            // Минимальная высота 400px, затем по 25px на каждую строку
             const chartContainer = document.getElementById('chartContainer');
             const chartHeight = Math.max(150, data.matrix.length * 25);
             chartContainer.style.height = `${chartHeight}px`;
-            const chartTitle = chartContainer.querySelector('h3');
-            if (chartTitle) {
-                chartTitle.textContent = `График разниц для всех строк`;
-            }
+             // Обновляем заголовок графика
+             const chartTitle = chartContainer.querySelector('h3');
+             if (chartTitle) {
+                 chartTitle.textContent = `График разниц для всех строк`;
+             }
             const ctx = document.getElementById('differencesChart').getContext('2d');
             const colorLegendDiv = document.getElementById('colorLegend');
-            colorLegendDiv.innerHTML = '';
+            colorLegendDiv.innerHTML = ''; // Очищаем предыдущую легенду
+            // Генерируем цвета для каждой строки
             const colors = generateColors(data.matrix.length);
             const legendItems = [];
+            // Подготавливаем массив datasets для Chart.js
             const datasets = [];
             for (let rowIndex = 0; rowIndex < data.matrix.length; rowIndex++) {
                 const row = data.matrix[rowIndex];
@@ -477,31 +532,37 @@
                 for (let i = 1; i < sortedValues.length; i++) {
                     differences.push(sortedValues[i] - sortedValues[i - 1]);
                 }
+                // Создаем dataset для текущей строки
                 datasets.push({
                     label: `Строка ${rowIndex}`,
                     data: differences,
                     borderColor: colors[rowIndex],
-                    backgroundColor: colors[rowIndex].replace(')', ', 0.1)').replace('hsl', 'hsla'),
+                    backgroundColor: colors[rowIndex].replace(')', ', 0.1)').replace('hsl', 'hsla'), // Полупрозрачный фон
                     pointBackgroundColor: colors[rowIndex],
                     pointBorderColor: '#fff',
-                    pointRadius: 2,
+                    pointRadius: 2, // Уменьшен радиус точек
                     pointHoverRadius: 5,
-                    fill: false,
-                    tension: 0.1,
-                    spanGaps: true
+                    fill: false, // Отключаем заливку для линий
+                    tension: 0.1, // Немного сглаживания
+                    spanGaps: true // Пропускать null значения
                 });
+                // Добавляем элемент в легенду
                 legendItems.push(`<span class="color-legend-item"><span class="color-box" style="background-color: ${colors[rowIndex]};"></span> Строка ${rowIndex}</span>`);
             }
+            // Отображаем легенду
             colorLegendDiv.innerHTML = legendItems.join(' ');
+            // Метки по оси X - индексы разниц (берем максимальную длину)
             const maxLength = Math.max(...datasets.map(d => d.data.length));
             const labels = Array.from({ length: maxLength }, (_, i) => i);
             const chartData = {
                 labels: labels,
                 datasets: datasets
             };
+            // Уничтожаем предыдущий график, если он существует
             if (chartInstance) {
                 chartInstance.destroy();
             }
+            // Создаем график
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: chartData,
@@ -510,7 +571,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: false,
+                            display: false, // Скрываем стандартную легенду
                         },
                         tooltip: {
                             mode: 'index',
@@ -539,32 +600,86 @@
                     }
                 }
             });
+            // Показываем контейнер графика
             chartContainer.style.display = 'block';
         }
-
+        
+        // Функция для восстановления исходного порядка столбцов
+        function restoreOriginalColumnOrder() {
+            if (!data) return;
+            const thead = document.querySelector('.matrix-table thead tr');
+            // Удаляем все переупорядоченные заголовки (оставляем первые 2)
+            while (thead.children.length > 2) {
+                thead.removeChild(thead.lastChild);
+            }
+            // Добавляем исходные заголовки
+            for (let i = 0; i < data.matrix[0].length; i++) {
+                const th = document.createElement('th');
+                th.className = 'header-cell';
+                th.textContent = i;
+                thead.appendChild(th);
+            }
+            
+            const tbody = document.getElementById('tableBody');
+            for (let i = 0; i < data.matrix.length; i++) {
+                const rowElement = tbody.children[i];
+                if (!rowElement) continue;
+                const cells = Array.from(rowElement.children);
+                const newCellsHTML = [];
+                
+                // Сохраняем первый столбец (#) и столбец рейтинга
+                newCellsHTML.push(cells[0].outerHTML); // #
+                newCellsHTML.push(cells[1].outerHTML); // Рейтинг
+                
+                // Добавляем ячейки в исходном порядке
+                for (let j = 0; j < data.matrix[i].length; j++) {
+                    const cell = cells.find(c => c.getAttribute('data-col') === String(j));
+                    if (cell) {
+                        newCellsHTML.push(cell.outerHTML);
+                    }
+                }
+                
+                rowElement.innerHTML = newCellsHTML.join('');
+            }
+            
+            // Восстанавливаем обработчики кликов
+            setupClickHandlers();
+        }
+        
+        // Функция сброса
         function resetSelection() {
+            // Удалить выделение с ячеек
             document.querySelectorAll('.matrix-cell').forEach(c => {
                 c.classList.remove('selected-cell');
             });
+            // Очистить строку изображений
             document.getElementById('imageGrid').innerHTML = '';
+            // Скрыть блок изображений
             document.getElementById('imageDisplay').style.display = 'none';
+            // Скрыть кнопку сброса
             document.getElementById('resetButton').style.display = 'none';
+            // Сбросить выбранную строку
             currentSelectedRow = null;
-            createMatrix();
+            // Восстановить исходный порядок столбцов
+            restoreOriginalColumnOrder();
+            // Отображаем график для всех строк по умолчанию
             drawChartForAllRows();
         }
-
+        
+        // Функция обработки загруженного файла
         function handleFile(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const jsonData = JSON.parse(e.target.result);
-                    if (jsonData.matrix && jsonData.legend && typeof jsonData.size === 'number') {
+                    if (jsonData.matrix && jsonData.legend) {
                         data = jsonData;
                         document.getElementById('dropZone').style.display = 'none';
                         document.getElementById('mainContent').style.display = 'block';
                         createMatrix();
+                        // Отображаем график для всех строк по умолчанию
                         drawChartForAllRows();
+                        // Добавляем обработчик события для кнопки сброса (если еще не добавлен)
                         if (!document.getElementById('resetButton').dataset.listenerAdded) {
                             document.getElementById('resetButton').addEventListener('click', resetSelection);
                             document.getElementById('resetButton').dataset.listenerAdded = 'true';
@@ -579,7 +694,8 @@
             };
             reader.readAsText(file);
         }
-
+        
+        // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
