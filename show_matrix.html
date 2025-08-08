@@ -354,7 +354,10 @@
         
         function reorderTableColumns(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
-            const rowValues = data.matrix[rowIndex];
+            const rowValues = data.matrix[rowIndex].map(value => value === null ? -1 : value);
+
+            console.log(rowValues);
+
             const valueIndexPairs = rowValues.map((value, index) => ({ value, index }))
                                              .filter(item => item.value !== null)
                                              .sort((a, b) => a.value - b.value);
