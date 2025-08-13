@@ -100,12 +100,7 @@
         }
         .image-display {
             min-height: 180px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            margin-bottom: 20px;
             overflow-x: auto; /* Добавляем горизонтальный скролл */
-            display: none; /* Скрываем по умолчанию */
         }
         .matrix-row:hover {
             background-color: #f8f9fa !important;
@@ -114,10 +109,6 @@
             margin: 20px 0 40px 0; /* 20px сверху, 40px снизу */
             position: relative;
             height: 500px; /* Фиксированная высота */
-        }
-        /* Показываем график по умолчанию */
-        .chart-container {
-            display: block;
         }
         /* Скрытие кнопки сброса по умолчанию */
         #resetButton {
@@ -135,8 +126,8 @@
             margin-right: 4px;
             border: 1px solid #ccc;
         }
-        /* Стили для нового столбца рейтинга */
-        .rating-cell {
+        /* Стили для нового столбца суммы */
+        .sum-cell {
             font-weight: bold;
             color: #0d6efd;
             min-width: 80px;
@@ -151,6 +142,28 @@
             padding: 5px 2px; /* Корректируем отступы */
             min-width: 20px; /* Минимальная ширина для вертикального текста */
         }
+        /* Стили для вкладок */
+        .tab-content {
+            border-left: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+            padding: 20px;
+        }
+        /* Скрываем блок изображений по умолчанию */
+        #imagesTab {
+            display: none;
+        }
+        /* Стили для сортировки */
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sortable:hover {
+            background-color: #e9ecef !important;
+        }
+        .sort-indicator {
+            margin-left: 5px;
+        }
     </style>
 </head>
 <body>
@@ -162,19 +175,27 @@
         </div>
         <!-- Основной контент (изначально скрыт) -->
         <div id="mainContent">
-            <!-- Контейнер для графика, отображается по умолчанию -->
-            <div class="row">
-                <div class="col-12">
+            <!-- Вкладки -->
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="chart-tab" data-bs-toggle="tab" data-bs-target="#chart" type="button" role="tab" aria-controls="chart" aria-selected="true">График</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab" aria-controls="images" aria-selected="false" disabled>Изображения</button>
+                </li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+                <!-- Вкладка графика -->
+                <div class="tab-pane fade show active" id="chart" role="tabpanel" aria-labelledby="chart-tab">
                     <div class="chart-container" id="chartContainer">
                         <h3>График разниц для всех строк</h3>
                         <div id="colorLegend" class="mb-2"></div> <!-- Легенда цветов -->
                         <canvas id="differencesChart"></canvas>
                     </div>
                 </div>
-            </div>
-            <div class="row" style="background-color: #ccc">
-                <div class="col-12">
-                    <div class="image-display" id="imageDisplay">
+                <!-- Вкладка изображений -->
+                <div class="tab-pane fade" id="images" role="tabpanel" aria-labelledby="images-tab">
+                    <div class="image-display">
                         <div id="imageGrid" class="image-row"></div>
                     </div>
                 </div>
@@ -186,6 +207,7 @@
                             <thead>
                                 <tr>
                                     <th class="header-cell">#</th>
+                                    <th class="header-cell sortable" data-sort="sum">Сумма <span class="sort-indicator">▼</span></th>
                                     <!-- Динамически генерируемые заголовки -->
                                 </tr>
                             </thead>
@@ -208,27 +230,20 @@
         let data = null;
         let chartInstance = null; // Переменная для хранения экземпляра графика
         let currentSelectedRow = null; // Переменная для отслеживания выбранной строки
-        // Функция для расчета рейтинга строки
-        function calculateRowRating(row) {
-            let greenCount = 0;
-            let yellowCount = 0;
+        let currentSort = { column: 'sum', direction: 'desc' }; // По умолчанию сортировка по сумме по убыванию
+
+        // Функция для расчета суммы строки
+        function calculateRowSum(row) {
+            let sum = 0;
             for (let j = 0; j < row.length; j++) {
                 const value = row[j];
-                if (value === null) continue;
-                // Нормализуем значение к диапазону [0, 1]
-                const normalizedValue = Math.min(1, Math.max(0, value));
-                if (normalizedValue <= 0.3) {
-                    greenCount++;
-                } else if (normalizedValue <= 0.7) {
-                    yellowCount++;
+                if (value !== null) {
+                    sum += value;
                 }
             }
-            return {
-                greenCount,
-                yellowCount,
-                rating: greenCount * 1000 + yellowCount * 50
-            };
+            return sum;
         }
+
         // Функция для получения цвета ячейки по значению
         function getCellColor(value) {
             // Нормализуем значение к диапазону [0, 1]
@@ -242,6 +257,7 @@
                 return '#F44336'; // Красный
             }
         }
+
         // Функция для генерации массива случайных цветов
         function generateColors(count) {
             const colors = [];
@@ -252,27 +268,84 @@
             }
             return colors;
         }
+
+        // Функция для нахождения минимума и максимума в матрице
+        function findMatrixMinMax(matrix) {
+            let min = Infinity;
+            let max = -Infinity;
+            for (let i = 0; i < matrix.length; i++) {
+                for (let j = 0; j < matrix[i].length; j++) {
+                    const value = matrix[i][j];
+                    if (value !== null) {
+                        if (value < min) min = value;
+                        if (value > max) max = value;
+                    }
+                }
+            }
+            return { min, max, range: max - min };
+        }
+
+        // Функция для вычисления разниц в процентах для строки
+        function calculateRowDifferencesInPercent(matrixMinMax, row) {
+            const { min: matrixMin, max: matrixMax, range: matrixRange } = matrixMinMax;
+            const sortedRow = row.filter(val => val !== null).sort((a, b) => a - b);
+            const differences = [];
+            if (sortedRow.length === 0) return differences;
+            // 1. Разница между первым элементом и минимумом матрицы
+            if (sortedRow.length > 0) {
+                const diff1 = ((sortedRow[0] - matrixMin) / matrixRange) * 100;
+                differences.push(diff1);
+            }
+            // 2. Разница между последующими элементами и предыдущим
+            for (let i = 1; i < sortedRow.length; i++) {
+                const diff = ((sortedRow[i] - sortedRow[i - 1]) / matrixRange) * 100;
+                differences.push(diff);
+            }
+            // 3. Разница между последним элементом и максимумом матрицы
+            if (sortedRow.length > 0) {
+                const lastDiff = ((matrixMax - sortedRow[sortedRow.length - 1]) / matrixRange) * 100;
+                differences.push(lastDiff);
+            }
+            return differences;
+        }
+
         // Функция для создания матрицы
         function createMatrix() {
             if (!data) return; // Проверка наличия данных
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
-            // Создаем заголовок таблицы динамически с добавлением столбца рейтинга
+
+            // Создаем заголовок таблицы динамически с добавлением столбца суммы
             const thead = document.querySelector('.matrix-table thead tr');
-            thead.innerHTML = '<th class="header-cell">#</th><th class="header-cell">Рейтинг</th>'; // Добавлен столбец рейтинга
+            thead.innerHTML = '<th class="header-cell">#</th><th class="header-cell sortable" data-sort="sum">Сумма <span class="sort-indicator">▼</span></th>';
             for (let i = 0; i < data.matrix[0].length; i++) {
                 const th = document.createElement('th');
                 th.className = 'header-cell';
-                th.textContent = i;
+                th.textContent = i + 1; // Нумерация с 1
                 thead.appendChild(th);
             }
-            for (let i = 0; i < data.matrix.length; i++) {
+
+            // Подготавливаем данные с суммами для сортировки
+            const rowsWithSums = data.matrix.map((row, index) => ({
+                index: index,
+                data: row,
+                sum: calculateRowSum(row)
+            }));
+
+            // Сортируем по сумме по убыванию (по умолчанию)
+            rowsWithSums.sort((a, b) => b.sum - a.sum);
+
+            // Создаем строки таблицы в отсортированном порядке
+            rowsWithSums.forEach(rowObj => {
+                const i = rowObj.index;
                 const row = document.createElement('tr');
                 row.className = 'matrix-row';
-                row.setAttribute('data-row', i); // Добавляем атрибут для правильного определения индекса
-                const ratingInfo = calculateRowRating(data.matrix[i]);
-                // Добавляем ячейку с рейтингом и подсказкой о количестве зеленых и желтых ячеек
-                let rowHTML = `<td class="header-cell">${i}</td><td class="header-cell rating-cell" title="Зеленых: ${ratingInfo.greenCount}, Желтых: ${ratingInfo.yellowCount}">${ratingInfo.rating}</td>`;
+                row.setAttribute('data-row', i);
+
+                const rowSum = rowObj.sum;
+                // Добавляем ячейку с суммой
+                let rowHTML = `<td class="header-cell">${i + 1}</td><td class="header-cell sum-cell">${rowSum.toFixed(3)}</td>`;
+
                 for (let j = 0; j < data.matrix[i].length; j++) {
                     const value = data.matrix[i][j];
                     if (value === null) {
@@ -285,10 +358,82 @@
                 }
                 row.innerHTML = rowHTML;
                 tableBody.appendChild(row);
-            }
+            });
+
             // Устанавливаем обработчики кликов
             setupClickHandlers();
+            setupSortHandlers();
         }
+
+        // Функция для установки обработчиков сортировки
+        function setupSortHandlers() {
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.addEventListener('click', function() {
+                    const sortColumn = this.getAttribute('data-sort');
+                    sortTable(sortColumn);
+                });
+            });
+        }
+
+        // Функция для сортировки таблицы
+        function sortTable(column) {
+            const tableBody = document.getElementById('tableBody');
+            const rows = Array.from(tableBody.querySelectorAll('.matrix-row'));
+
+            // Определяем направление сортировки
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'desc'; // По умолчанию по убыванию
+            }
+
+            // Сортируем строки
+            rows.sort((a, b) => {
+                let aValue, bValue;
+
+                if (column === 'sum') {
+                    // Получаем значения суммы из ячеек
+                    aValue = parseFloat(a.querySelector('.sum-cell').textContent);
+                    bValue = parseFloat(b.querySelector('.sum-cell').textContent);
+                } else {
+                    // Для других колонок (по индексу)
+                    const colIndex = parseInt(column);
+                    const aCell = a.querySelector(`[data-col="${colIndex}"]`);
+                    const bCell = b.querySelector(`[data-col="${colIndex}"]`);
+                    aValue = aCell ? parseFloat(aCell.textContent) : -Infinity;
+                    bValue = bCell ? parseFloat(bCell.textContent) : -Infinity;
+                }
+
+                // Проверка на NaN
+                if (isNaN(aValue)) aValue = -Infinity;
+                if (isNaN(bValue)) bValue = -Infinity;
+
+                // Сортировка
+                if (currentSort.direction === 'asc') {
+                    return aValue - bValue;
+                } else {
+                    return bValue - aValue;
+                }
+            });
+
+            // Обновляем индикаторы сортировки
+            document.querySelectorAll('.sortable .sort-indicator').forEach(indicator => {
+                indicator.textContent = '';
+            });
+
+            const currentHeader = document.querySelector(`.sortable[data-sort="${column}"] .sort-indicator`);
+            if (currentHeader) {
+                currentHeader.textContent = currentSort.direction === 'asc' ? '▲' : '▼';
+            }
+
+            // Перерисовываем таблицу
+            rows.forEach(row => tableBody.appendChild(row));
+
+            // Обновляем обработчики кликов
+            setupClickHandlers();
+        }
+
         function setupClickHandlers() {
             // Добавляем обработчики кликов на строки
             document.querySelectorAll('.matrix-row').forEach(row => {
@@ -319,6 +464,7 @@
                 cell.addEventListener('click', cellClickHandler);
             });
         }
+
         function cellClickHandler(e) {
             e.stopPropagation(); // Останавливаем всплытие события, чтобы не сработал обработчик строки
             const row = this.getAttribute('data-row');
@@ -333,6 +479,7 @@
                 selectRow(rowIndex);
             }
         }
+
         // Функция для обработки выбора строки
         function selectRow(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length || currentSelectedRow === rowIndex) return;
@@ -343,11 +490,12 @@
             reorderTableColumns(rowIndex);
             // Перерисовать график для выбранной строки
             drawChartForSingleRow(rowIndex);
-            // Показать блок изображений
-            document.getElementById('imageDisplay').style.display = 'block';
+            // Активируем вкладку изображений
+            document.getElementById('images-tab').disabled = false;
             // Показать кнопку сброса
             document.getElementById('resetButton').style.display = 'inline-block';
         }
+
         function reorderTableColumns(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
             const rowValues = data.matrix[rowIndex].map(value => value === null ? -1 : value);
@@ -363,8 +511,8 @@
             valueIndexPairs.forEach(pair => {
                 const th = document.createElement('th');
                 th.className = 'header-cell reordered-header';
-                th.textContent = pair.index;
-                th.title = `Оригинальный индекс: ${pair.index}, Значение: ${pair.value !== null ? pair.value.toFixed(3) : 'N/A'}`;
+                th.textContent = pair.index + 1; // Нумерация с 1
+                th.title = `Оригинальный индекс: ${pair.index + 1}, Значение: ${pair.value !== null ? pair.value.toFixed(3) : 'N/A'}`;
                 thead.appendChild(th);
             });
             const tbody = document.getElementById('tableBody');
@@ -373,9 +521,9 @@
                 if (!rowElement) continue;
                 const originalCells = Array.from(rowElement.children);
                 const newCellsHTML = [];
-                // Сохраняем первый столбец (#) и столбец рейтинга
+                // Сохраняем первый столбец (#) и столбец суммы
                 newCellsHTML.push(originalCells[0].outerHTML); // #
-                newCellsHTML.push(originalCells[1].outerHTML); // Рейтинг
+                newCellsHTML.push(originalCells[1].outerHTML); // Сумма
                 valueIndexPairs.forEach(pair => {
                     const originalIndex = pair.index;
                     const cellToMove = originalCells.find(cell => cell.getAttribute('data-col') === String(originalIndex));
@@ -388,6 +536,7 @@
             // Обновляем обработчики кликов
             setupClickHandlers();
         }
+
         // Функция для отображения изображений по схожести
         function showImages(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
@@ -398,7 +547,7 @@
             const imageWeights = weights.map((weight, index) => ({
                 path: data.legend[index], // Используем путь из legend
                 weight: weight,
-                index: index
+                index: index + 1 // Нумерация с 1
             }));
             // Получаем изображение строки
             const rowImage = imageWeights[rowIndex];
@@ -426,19 +575,21 @@
                 imageGrid.appendChild(container);
             });
         }
+
         // Функция для рисования графика для ОДНОЙ строки
         function drawChartForSingleRow(rowIndex) {
             if (!data || isNaN(rowIndex) || rowIndex < 0 || rowIndex >= data.matrix.length) return;
+
+            // Находим минимум и максимум в матрице
+            const matrixMinMax = findMatrixMinMax(data.matrix);
             const row = data.matrix[rowIndex];
-            const sortedValues = row.filter(val => val !== null).sort((a, b) => a - b);
-            const differences = [];
-            for (let i = 1; i < sortedValues.length; i++) {
-                differences.push(sortedValues[i] - sortedValues[i - 1]);
-            }
+            // Вычисляем разницы в процентах
+            const differences = calculateRowDifferencesInPercent(matrixMinMax, row);
+
             // Обновляем заголовок графика
             const chartTitle = document.getElementById('chartContainer').querySelector('h3');
             if (chartTitle) {
-                chartTitle.textContent = `График разниц для строки ${rowIndex}`;
+                chartTitle.textContent = `График разниц для строки ${rowIndex + 1}`; // Нумерация с 1
             }
             const ctx = document.getElementById('differencesChart').getContext('2d');
             const colorLegendDiv = document.getElementById('colorLegend');
@@ -446,7 +597,7 @@
             // Генерируем цвет для выбранной строки
             const color = generateColors(1)[0]; // Берем первый цвет из массива из одного цвета
             const dataset = {
-                label: `Строка ${rowIndex}`,
+                label: `Строка ${rowIndex + 1}`, // Нумерация с 1
                 data: differences,
                 borderColor: color,
                 backgroundColor: color.replace(')', ', 0.1)').replace('hsl', 'hsla'), // Полупрозрачный фон
@@ -459,7 +610,7 @@
                 spanGaps: true
             };
             // Отображаем легенду для одной строки
-            colorLegendDiv.innerHTML = `<span class="color-legend-item"><span class="color-box" style="background-color: ${color};"></span> Строка ${rowIndex}</span>`;
+            colorLegendDiv.innerHTML = `<span class="color-legend-item"><span class="color-box" style="background-color: ${color};"></span> Строка ${rowIndex + 1}</span>`; // Нумерация с 1
             const labels = Array.from({ length: differences.length }, (_, i) => i);
             const chartData = {
                 labels: labels,
@@ -482,7 +633,12 @@
                         },
                         tooltip: {
                             mode: 'index',
-                            intersect: false
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -495,7 +651,12 @@
                             title: {
                                 display: false
                             },
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            }
                         }
                     },
                     interaction: {
@@ -508,9 +669,14 @@
             // Показываем контейнер графика
             document.getElementById('chartContainer').style.display = 'block';
         }
+
         // Функция для рисования графика для ВСЕХ строк (исходная)
         function drawChartForAllRows() {
             if (!data) return; // Проверка наличия данных
+
+            // Находим минимум и максимум в матрице
+            const matrixMinMax = findMatrixMinMax(data.matrix);
+
             // Обновляем заголовок графика
             const chartTitle = document.getElementById('chartContainer').querySelector('h3');
             if (chartTitle) {
@@ -526,14 +692,12 @@
             const datasets = [];
             for (let rowIndex = 0; rowIndex < data.matrix.length; rowIndex++) {
                 const row = data.matrix[rowIndex];
-                const sortedValues = row.filter(val => val !== null).sort((a, b) => a - b);
-                const differences = [];
-                for (let i = 1; i < sortedValues.length; i++) {
-                    differences.push(sortedValues[i] - sortedValues[i - 1]);
-                }
+                // Вычисляем разницы в процентах
+                const differences = calculateRowDifferencesInPercent(matrixMinMax, row);
+
                 // Создаем dataset для текущей строки
                 datasets.push({
-                    label: `Строка ${rowIndex}`,
+                    label: `Строка ${rowIndex + 1}`, // Нумерация с 1
                     data: differences,
                     borderColor: colors[rowIndex],
                     backgroundColor: colors[rowIndex].replace(')', ', 0.1)').replace('hsl', 'hsla'), // Полупрозрачный фон
@@ -546,7 +710,7 @@
                     spanGaps: true // Пропускать null значения
                 });
                 // Добавляем элемент в легенду
-                legendItems.push(`<span class="color-legend-item"><span class="color-box" style="background-color: ${colors[rowIndex]};"></span> Строка ${rowIndex}</span>`);
+                legendItems.push(`<span class="color-legend-item"><span class="color-box" style="background-color: ${colors[rowIndex]};"></span> Строка ${rowIndex + 1}</span>`); // Нумерация с 1
             }
             // Отображаем легенду
             colorLegendDiv.innerHTML = legendItems.join(' ');
@@ -574,7 +738,12 @@
                         },
                         tooltip: {
                             mode: 'index',
-                            intersect: false
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -587,9 +756,14 @@
                         y: {
                             title: {
                                 display: true,
-                                text: 'Значение разницы'
+                                text: 'Значение разницы (%)'
                             },
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            }
                         }
                     },
                     interaction: {
@@ -602,6 +776,7 @@
             // Показываем контейнер графика
             document.getElementById('chartContainer').style.display = 'block';
         }
+
         // Функция для восстановления исходного порядка столбцов
         function restoreOriginalColumnOrder() {
             if (!data) return;
@@ -614,7 +789,7 @@
             for (let i = 0; i < data.matrix[0].length; i++) {
                 const th = document.createElement('th');
                 th.className = 'header-cell';
-                th.textContent = i;
+                th.textContent = i + 1; // Нумерация с 1
                 thead.appendChild(th);
             }
             const tbody = document.getElementById('tableBody');
@@ -623,9 +798,9 @@
                 if (!rowElement) continue;
                 const cells = Array.from(rowElement.children);
                 const newCellsHTML = [];
-                // Сохраняем первый столбец (#) и столбец рейтинга
+                // Сохраняем первый столбец (#) и столбец суммы
                 newCellsHTML.push(cells[0].outerHTML); // #
-                newCellsHTML.push(cells[1].outerHTML); // Рейтинг
+                newCellsHTML.push(cells[1].outerHTML); // Сумма
                 // Добавляем ячейки в исходном порядке
                 for (let j = 0; j < data.matrix[i].length; j++) {
                     const cell = cells.find(c => c.getAttribute('data-col') === String(j));
@@ -638,6 +813,7 @@
             // Восстанавливаем обработчики кликов
             setupClickHandlers();
         }
+
         // Функция сброса
         function resetSelection() {
             // Удалить выделение с ячеек
@@ -646,8 +822,6 @@
             });
             // Очистить строку изображений
             document.getElementById('imageGrid').innerHTML = '';
-            // Скрыть блок изображений
-            document.getElementById('imageDisplay').style.display = 'none';
             // Скрыть кнопку сброса
             document.getElementById('resetButton').style.display = 'none';
             // Сбросить выбранную строку
@@ -656,7 +830,13 @@
             restoreOriginalColumnOrder();
             // Отображаем график для всех строк по умолчанию
             drawChartForAllRows();
+            // Деактивируем вкладку изображений
+            document.getElementById('images-tab').disabled = true;
+            // Переключаемся на вкладку графика
+            const chartTab = new bootstrap.Tab(document.getElementById('chart-tab'));
+            chartTab.show();
         }
+
         // Функция обработки загруженного файла
         function handleFile(file) {
             const reader = new FileReader();
@@ -685,6 +865,7 @@
             };
             reader.readAsText(file);
         }
+
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
             const dropZone = document.getElementById('dropZone');
@@ -720,5 +901,6 @@
             });
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
