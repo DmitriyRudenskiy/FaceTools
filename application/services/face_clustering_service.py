@@ -22,6 +22,7 @@ class FaceClusteringService:
         self.bbox_processor = bbox_processor
         self.image_loader = image_loader
         self.result_saver = result_saver
+        self.processing_results = []  # Для сбора результатов перед выводом таблицы
 
     def process_images(self, input_path: str, output_dir: str = None) -> bool:
         """Обрабатывает изображения и сохраняет вырезанные лица"""
@@ -39,7 +40,6 @@ class FaceClusteringService:
 
         try:
             self.file_organizer.create_directory(output_dir)
-            print(f"Результаты будут сохранены в: {output_dir}")
         except Exception as e:
             print(f"Ошибка создания директории: {str(e)}")
             return False
@@ -51,26 +51,56 @@ class FaceClusteringService:
         for img_path in self.file_organizer.get_image_files(input_path):
             total_count += 1
             try:
-                print(f"\nОбработка: {img_path}")
+                # Извлекаем только имя файла без пути
+                filename = os.path.basename(img_path)
                 image = self.image_loader.load(img_path)
                 faces = self._detect_faces(image)
 
-                # Сохраняем каждое лицо
+                # Сохраняем каждое лицо и собираем результаты
+                saved_files = []
                 for i, face in enumerate(faces):
                     face_img = self._crop_face(image, face.bounding_box)
                     output_path = self._generate_output_path(img_path, i, output_dir)
                     self.result_saver.save(face_img, output_path)
-                    print(f"Сохранено: {output_path}")
 
+                    # Сохраняем только имя файла без пути
+                    saved_filename = os.path.basename(output_path)
+                    saved_files.append(saved_filename)
+
+                # Сохраняем результаты для последующего вывода таблицы
+                self.processing_results.append((filename, saved_files))
                 success_count += 1
             except FaceDetectionError as e:
-                print(f"Пропущено изображение {img_path}: Ошибка детекции лиц - {str(e)}")
-            except Exception as e:
-                print(f"Ошибка обработки {img_path}: {str(e)}")
                 continue
+            except Exception as e:
+                continue
+
+        # Выводим результаты в виде таблицы
+        self._print_results_table()
 
         print(f"\nОбработка завершена! Обработано: {success_count}/{total_count} изображений")
         return success_count > 0
+
+    def _print_results_table(self):
+        """Выводит результаты обработки в виде таблицы"""
+        if not self.processing_results:
+            return
+
+        # Определяем ширину колонок
+        max_input_len = max(len("Обработка"), max(len(item[0]) for item in self.processing_results))
+        max_output_len = max(len("Сохранено"), max(len(", ".join(item[1])) for item in self.processing_results))
+
+        # Выводим заголовок таблицы
+        print("\n" + "=" * (max_input_len + max_output_len + 7))
+        print(f"| {'Обработка':<{max_input_len}} | {'Сохранено':<{max_output_len}} |")
+        print("|" + "-" * (max_input_len + 2) + "|" + "-" * (max_output_len + 2) + "|")
+
+        # Выводим строки таблицы
+        for filename, saved_files in self.processing_results:
+            saved_files_str = ", ".join(saved_files) if saved_files else ""
+            print(f"| {filename:<{max_input_len}} | {saved_files_str:<{max_output_len}} |")
+
+        print("=" * (max_input_len + max_output_len + 7))
 
     def _detect_faces(self, image: Image) -> List[Face]:
         """Детекция лиц на изображении"""
@@ -83,8 +113,8 @@ class FaceClusteringService:
             for box in merged_boxes:
                 faces.append(Face(
                     bounding_box=box,
-                    landmarks=None,  # В текущей реализации landmarks не обнаруживаются
-                    embedding=[],  # В текущей реализации эмбеддинги не извлекаются
+                    landmarks=None,
+                    embedding=[],
                     image=image
                 ))
             return faces
@@ -103,6 +133,6 @@ class FaceClusteringService:
             raise FaceDetectionError(f"Ошибка обрезки лица: {str(e)}") from e
 
     def _generate_output_path(self, source_path: str, face_index: int, output_dir: str) -> str:
-        """Генерация пути для сохранения лица"""
+        """Генерация пути для сохранения лица с именем вида original_face_N.jpg"""
         base_name = self.file_organizer.get_basename(source_path)
         return os.path.join(output_dir, f"{base_name}_face_{face_index + 1}.jpg")
