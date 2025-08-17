@@ -1,25 +1,27 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
-import numpy as np
+from typing import List, Tuple
 
 
 @dataclass
 class BoundingBox:
-    x: int
-    y: int
-    width: int
-    height: int
+    """Границы обнаруженного лица"""
+    x1: float
+    y1: float
+    x2: float
+    y2: float
 
     @property
-    def area(self) -> int:
-        return self.width * self.height
+    def width(self) -> float:
+        return self.x2 - self.x1
 
-    def to_tuple(self) -> Tuple[int, int, int, int]:
-        return (self.x, self.y, self.x + self.width, self.y + self.height)
+    @property
+    def height(self) -> float:
+        return self.y2 - self.y1
 
 
 @dataclass
 class Landmarks:
+    """Ключевые точки лица"""
     left_eye: Tuple[float, float]
     right_eye: Tuple[float, float]
     nose: Tuple[float, float]
@@ -29,9 +31,8 @@ class Landmarks:
 
 @dataclass
 class Face:
-    bbox: BoundingBox
-    landmarks: Optional[Landmarks] = None
-    embedding: Optional[np.ndarray] = None
-    confidence: float = 0.0
-    orientation: str = "front"
-    image_path: str = ""
+    """Доменная модель лица"""
+    bounding_box: BoundingBox
+    landmarks: Landmarks
+    embedding: List[float]
+    image: 'Image'

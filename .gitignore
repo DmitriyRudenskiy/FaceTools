@@ -208,4 +208,9 @@ __marimo__/
 
 # idea folder, uncomment if you don't need it
 .idea
-/model.pt
+/models/yolov8n-face.pt
+/checkpoints/yolox_l.onnx
+/checkpoints/dw-ll_ucoco_384.onnx
+/checkpoints/dw-ll_ucoco_384.pth
+/checkpoints/rtmpose-m_simcc-face6_pt-in1k_120e-256x256-72a37400_20230529.pth
+/checkpoints/yolo-x_8xb8-300e_coco-face_13274d7c.pth

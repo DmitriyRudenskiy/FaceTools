@@ -1,64 +1,108 @@
+from core.interfaces import FaceDetector, BoundingBoxProcessor, ImageLoader, FileOrganizer, ResultSaver
+from core.exceptions import FaceDetectionError, FileHandlingError
+from domain.image import Image
+from domain.face import Face, BoundingBox
 from typing import List, Tuple
-import numpy as np
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from core.interfaces import ClusterAnalyzer, Clusterer
-from domain.face import Face
-
-
-class SilhouetteClusterAnalyzer(ClusterAnalyzer):
-    """Реализация анализа кластеров методом силуэта."""
-
-    def find_optimal_clusters(self, embeddings: List[np.ndarray], max_clusters: int, method: str = 'silhouette') -> int:
-        embeddings_array = np.array(embeddings)
-        best_score = -1
-        optimal_k = 2  # Минимальное количество кластеров
-
-        for k in range(2, min(max_clusters + 1, len(embeddings_array))):
-            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
-            labels = kmeans.fit_predict(embeddings_array)
-            score = silhouette_score(embeddings_array, labels)
-
-            if score > best_score:
-                best_score = score
-                optimal_k = k
-
-        return optimal_k
-
-
-class KMeansClusterer(Clusterer):
-    """Реализация кластеризации с использованием KMeans."""
-
-    def cluster(self, embeddings: List[np.ndarray], n_clusters: int) -> List[int]:
-        embeddings_array = np.array(embeddings)
-        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-        return kmeans.fit_predict(embeddings_array).tolist()
+import os
 
 
 class FaceClusteringService:
-    """Сервис для кластеризации лиц."""
+    """Сервис обработки и кластеризации лиц"""
 
-    def __init__(self,
-                 cluster_analyzer: ClusterAnalyzer,
-                 clusterer: Clusterer):
-        self.cluster_analyzer = cluster_analyzer
-        self.clusterer = clusterer
+    def __init__(
+            self,
+            file_organizer: FileOrganizer,
+            face_detector: FaceDetector,
+            bbox_processor: BoundingBoxProcessor,
+            image_loader: ImageLoader,
+            result_saver: ResultSaver
+    ):
+        self.file_organizer = file_organizer
+        self.face_detector = face_detector
+        self.bbox_processor = bbox_processor
+        self.image_loader = image_loader
+        self.result_saver = result_saver
 
-    def cluster_faces(self,
-                      faces: List[Face],
-                      max_clusters: int = 20,
-                      method: str = 'silhouette') -> Tuple[int, List[int]]:
-        """Выполняет кластеризацию лиц."""
-        # Извлекаем эмбеддинги
-        embeddings = [face.embedding for face in faces]
+    def process_images(self, input_path: str, output_dir: str = None) -> bool:
+        """Обрабатывает изображения и сохраняет вырезанные лица"""
+        try:
+            if not self.file_organizer.exists(input_path):
+                raise FileHandlingError(f"Путь '{input_path}' не существует")
+        except Exception as e:
+            print(f"Ошибка проверки пути: {str(e)}")
+            return False
 
-        if len(embeddings) < 2:
-            raise ValueError("Недостаточно лиц для кластеризации (минимум 2)")
+        # Определяем выходную директорию
+        if output_dir is None:
+            output_dir = input_path if self.file_organizer.is_directory(input_path) \
+                else self.file_organizer.get_directory(input_path)
 
-        # Поиск оптимального количества кластеров
-        optimal_k = self.cluster_analyzer.find_optimal_clusters(embeddings, max_clusters, method)
+        try:
+            self.file_organizer.create_directory(output_dir)
+            print(f"Результаты будут сохранены в: {output_dir}")
+        except Exception as e:
+            print(f"Ошибка создания директории: {str(e)}")
+            return False
 
-        # Кластеризация
-        labels = self.clusterer.cluster(embeddings, optimal_k)
+        # Обрабатываем каждое изображение
+        success_count = 0
+        total_count = 0
 
-        return optimal_k, labels
+        for img_path in self.file_organizer.get_image_files(input_path):
+            total_count += 1
+            try:
+                print(f"\nОбработка: {img_path}")
+                image = self.image_loader.load(img_path)
+                faces = self._detect_faces(image)
+
+                # Сохраняем каждое лицо
+                for i, face in enumerate(faces):
+                    face_img = self._crop_face(image, face.bounding_box)
+                    output_path = self._generate_output_path(img_path, i, output_dir)
+                    self.result_saver.save(face_img, output_path)
+                    print(f"Сохранено: {output_path}")
+
+                success_count += 1
+            except FaceDetectionError as e:
+                print(f"Пропущено изображение {img_path}: Ошибка детекции лиц - {str(e)}")
+            except Exception as e:
+                print(f"Ошибка обработки {img_path}: {str(e)}")
+                continue
+
+        print(f"\nОбработка завершена! Обработано: {success_count}/{total_count} изображений")
+        return success_count > 0
+
+    def _detect_faces(self, image: Image) -> List[Face]:
+        """Детекция лиц на изображении"""
+        try:
+            raw_boxes = self.face_detector.detect(image)
+            merged_boxes = self.bbox_processor.merge_overlapping(raw_boxes)
+
+            # Создаем объекты Face из bounding boxes
+            faces = []
+            for box in merged_boxes:
+                faces.append(Face(
+                    bounding_box=box,
+                    landmarks=None,  # В текущей реализации landmarks не обнаруживаются
+                    embedding=[],  # В текущей реализации эмбеддинги не извлекаются
+                    image=image
+                ))
+            return faces
+        except Exception as e:
+            raise FaceDetectionError(f"Ошибка детекции лиц: {str(e)}") from e
+
+    def _crop_face(self, image: Image, bbox: BoundingBox) -> any:
+        """Обрезка лица по bounding box"""
+        try:
+            crop_coords = self.bbox_processor.calculate_square_crop(
+                bbox,
+                (image.info.size[0], image.info.size[1])
+            )
+            return image.data.crop(crop_coords)
+        except Exception as e:
+            raise FaceDetectionError(f"Ошибка обрезки лица: {str(e)}") from e
+
+    def _generate_output_path(self, source_path: str, face_index: int, output_dir: str) -> str:
+        """Генерация пути для сохранения лица"""
+        base_name = self.file_organizer.get_basename(source_path)
+        return os.path.join(output_dir, f"{base_name}_face_{face_index + 1}.jpg")

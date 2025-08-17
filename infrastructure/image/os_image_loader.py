@@ -2,8 +2,10 @@ import os
 import cv2
 import numpy as np
 from typing import List, Tuple
-from core.interfaces.image_loader import ImageLoader
 from core.exceptions.file_handling_error import FileHandlingError
+from core.interfaces.image_loader import ImageLoader
+from domain.image import Image, ImageInfo
+from PIL import Image as PILImage
 
 class OSImageLoader(ImageLoader):
     """Реализация загрузки изображений через операционную систему."""
@@ -38,3 +40,17 @@ class OSImageLoader(ImageLoader):
                     raise FileHandlingError(f"Ошибка загрузки файла {file_path}: {str(e)}")
 
         return images
+
+    """Загрузка изображений через PIL"""
+
+    def load(self, path: str) -> Image:
+        pil_image = PILImage.open(path)
+
+        return Image(
+            data=pil_image,
+            info=ImageInfo(
+                path=path,
+                size=pil_image.size,
+                format=pil_image.format
+            )
+        )

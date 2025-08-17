@@ -1,16 +1,17 @@
 from typing import List, Tuple, Dict
 import numpy as np
-from core.interfaces import ImageLoader, FaceDetector, FeatureExtractor
+from core.interfaces import FaceDetector, ImageLoader, ResultSaver, FileOrganizer
 from domain.face import Face
 
 
 class FaceProcessingService:
-    """Сервис для обработки изображений с лицами."""
-
-    def __init__(self,
-                 image_loader: ImageLoader,
-                 face_detector: FaceDetector,
-                 feature_extractor: FeatureExtractor):
+    def __init__(
+        self,
+        file_organizer: FileOrganizer,
+        face_detector: FaceDetector,
+        image_loader: ImageLoader,
+        result_saver: ResultSaver
+    ):
         self.image_loader = image_loader
         self.face_detector = face_detector
         self.feature_extractor = feature_extractor

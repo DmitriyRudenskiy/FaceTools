@@ -346,7 +346,7 @@ class ApplicationFactory:
         # Определяем путь к модели, если не указан
         if model_path is None:
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            model_path = os.path.join(script_dir, "model.pt")
+            model_path = os.path.join(script_dir, "yolov8n-face.pt")
 
         # Создаем зависимости
         file_system = OSFileSystem()
