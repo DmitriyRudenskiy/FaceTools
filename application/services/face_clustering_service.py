@@ -24,7 +24,11 @@ class FaceClusteringService:
         self.result_saver = result_saver
         self.processing_results = []  # Для сбора результатов перед выводом таблицы
 
-    def process_images(self, input_path: str, output_dir: str = None) -> bool:
+    def process(self, input_path: str, output_file: str = "groups.json", dest_dir: str = None) -> bool:
+        """Основной метод обработки - совместимый с CLI"""
+        return self.process_images(input_path, output_file, dest_dir)
+
+    def process_images(self, input_path: str, output_dir: str = None, dest_dir: str = None) -> bool:
         """Обрабатывает изображения и сохраняет вырезанные лица"""
         try:
             if not self.file_organizer.exists(input_path):

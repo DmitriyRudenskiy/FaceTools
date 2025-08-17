@@ -1,21 +1,21 @@
 from core.interfaces.file_organizer import FileOrganizer
-from core.interfaces.result_saver import ResultSaver
 import os
-from typing import List  # Добавлен импорт List
+import shutil
+from typing import List, Dict, Any
 
 
-class FileSystemOrganizer(FileOrganizer, ResultSaver):
-    """Работа с файловой системой и сохранение результатов"""
+class FileSystemOrganizer(FileOrganizer):
+    """Работа с файловой системой"""
 
     def get_image_files(self, path: str) -> List[str]:
         """Возвращает список путей к изображениям в указанном пути"""
         image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.gif'}
 
-        if not self.exists(path):
+        if not os.path.exists(path):
             return []
 
-        if not self.is_directory(path):
-            ext = os.path.splitext(path)[1].lower()
+        if os.path.isfile(path):
+            _, ext = os.path.splitext(path.lower())
             return [path] if ext in image_extensions else []
 
         return [
@@ -24,6 +24,34 @@ class FileSystemOrganizer(FileOrganizer, ResultSaver):
             for file in files
             if os.path.splitext(file)[1].lower() in image_extensions
         ]
+
+    def organize_by_clusters(self, clusters: List[Dict], destination: str) -> None:
+        """Организует файлы по кластерам в отдельные директории"""
+        os.makedirs(destination, exist_ok=True)
+        print(f"Создана директория для групп: {destination}")
+
+        for cluster in clusters:
+            # Создаем имя директории на основе представителя
+            representative_name = os.path.splitext(cluster["representative"])[0]
+            safe_name = "".join(c for c in representative_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            if not safe_name:
+                safe_name = f"Group_{cluster['id']}"
+
+            group_dir = os.path.join(destination, safe_name)
+            os.makedirs(group_dir, exist_ok=True)
+
+            # Копируем файлы в директорию кластера
+            copied = 0
+            for full_path in cluster["members_paths"]:
+                try:
+                    filename = os.path.basename(full_path)
+                    dest_path = os.path.join(group_dir, filename)
+                    shutil.copy2(full_path, dest_path)
+                    copied += 1
+                except Exception as e:
+                    print(f"Ошибка копирования {filename}: {str(e)}")
+
+            print(f"Группа '{safe_name}': скопировано {copied} файлов")
 
     def create_directory(self, path: str) -> None:
         """Создает директорию, если она не существует"""

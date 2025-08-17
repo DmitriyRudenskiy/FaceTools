@@ -3,7 +3,7 @@
 Точка входа CLI-приложения для кластеризации лиц.
 Использование:
   python -m application.cli.run <input_path> [output_dir]
-  python /path/to/run.py <input_path> [output_dir]
+  python /path/to/extract_faces.py <input_path> [output_dir]
 """
 import sys
 import os

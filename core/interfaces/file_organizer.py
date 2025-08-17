@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List  # Добавлен импорт List
+from typing import List, Dict  # Добавлен импорт Dict
 
 
 class FileOrganizer(ABC):
@@ -33,4 +33,9 @@ class FileOrganizer(ABC):
     @abstractmethod
     def get_basename(self, path: str) -> str:
         """Возвращает базовое имя файла без расширения"""
+        pass
+
+    @abstractmethod
+    def organize_by_clusters(self, clusters: List[Dict], destination: str) -> None:
+        """Организует файлы по кластерам в отдельные директории"""
         pass

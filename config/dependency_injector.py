@@ -12,8 +12,8 @@ class DependencyInjector:
         file_organizer = FileSystemOrganizer()
         return FaceClusteringService(
             file_organizer=file_organizer,
-            face_detector=YOLOFaceDetector(),  # ИСПРАВЛЕНО: YOLOFaceDetector с заглавными YOLO
+            face_detector=YOLOFaceDetector(),  # Убедитесь, что имя класса верное
             bbox_processor=DefaultBoundingBoxProcessor(),
             image_loader=OSImageLoader(),
-            result_saver=file_organizer  # Используем один экземпляр для FileOrganizer и ResultSaver
+            result_saver=file_organizer
         )
