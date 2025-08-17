@@ -72,6 +72,11 @@ class FileSystem(ABC):
         """Возвращает директорию, содержащую файл"""
         pass
 
+    @abstractmethod
+    def get_basename(self, path: str) -> str:
+        """Возвращает базовое имя файла без расширения"""
+        pass
+
 
 # Реализации для работы с изображениями
 class PILImageLoader(ImageLoader):
@@ -95,7 +100,7 @@ class YOLOFaceDetector(FaceDetectionModel):
         from supervision import Detections
         output = self.model(image)
         results = Detections.from_ultralytics(output[0])
-        return [bbox.tolist() for bbox in results.xyxy]
+        return results.xyxy.tolist()  # Упрощенное преобразование
 
 
 # Реализация для обработки bounding box'ов
@@ -157,10 +162,10 @@ class DefaultBoundingBoxProcessor(BoundingBoxProcessor):
 
         return merged_boxes
 
-    def calculate_square_crop(bbox, image_size):
+    def calculate_square_crop(self, bbox: List[float], image_size: Tuple[int, int]) -> Tuple[int, int, int, int]:
         """
         Рассчитывает координаты квадратной области для обрезки.
-        Добавляет по 25% от размера квадрата с каждой стороны (слева, справа, сверху, снизу).
+        Добавляет по 25% от размера квадрата с каждой стороны.
         Результат гарантированно квадратный.
         Args:
             bbox: Координаты bounding box [x1, y1, x2, y2]
@@ -178,81 +183,41 @@ class DefaultBoundingBoxProcessor(BoundingBoxProcessor):
         # Определяем размер квадрата (по большей стороне)
         square_size = max(width, height)
 
-        # --- ДОБАВЛЕНИЕ ПРОЦЕНТОВ ---
         # Вычисляем отступы: 25% для всех сторон
-        padding = int(0.25 * square_size)  # Отступ со всех сторон
+        padding = int(0.25 * square_size)
 
-        # --- ОПРЕДЕЛЕНИЕ РАЗМЕРОВ ИТОГОВОГО КВАДРАТА ---
-        # Итоговый размер квадрата (исходный размер + 50% на отступы)
+        # Итоговый размер квадрата
         final_size = square_size + 2 * padding
 
-        # --- ВЫЧИСЛЕНИЕ КООРДИНАТ ---
         # Центр bounding box
         center_x = (x1 + x2) // 2
         center_y = (y1 + y2) // 2
 
-        # Левая и правая границы квадрата
+        # Вычисляем границы квадрата
         half_size = final_size // 2
-        new_x1 = center_x - half_size
-        new_x2 = center_x + half_size
+        new_x1 = max(0, center_x - half_size)
+        new_y1 = max(0, center_y - half_size)
+        new_x2 = min(img_width, center_x + half_size)
+        new_y2 = min(img_height, center_y + half_size)
 
-        # Верхняя и нижняя границы квадрата
-        new_y1 = center_y - half_size
-        new_y2 = center_y + half_size
+        # Корректируем размер, если вышли за границы
+        actual_width = new_x2 - new_x1
+        actual_height = new_y2 - new_y1
+        actual_size = min(actual_width, actual_height)
 
-        # --- КОРРЕКЦИЯ ГРАНИЦ ИЗОБРАЖЕНИЯ ---
-        # Корректируем по X
-        if new_x1 < 0:
-            offset = -new_x1
-            new_x1 += offset
-            new_x2 += offset
-        if new_x2 > img_width:
-            offset = new_x2 - img_width
-            new_x1 -= offset
-            new_x2 -= offset
-            # Повторная проверка левой границы
-            if new_x1 < 0:
-                new_x1 = 0
-                new_x2 = min(img_width, new_x1 + final_size)
+        # Корректируем размеры под квадрат
+        if actual_size < final_size:
+            new_x1 = max(0, center_x - actual_size // 2)
+            new_x2 = new_x1 + actual_size
+            if new_x2 > img_width:
+                new_x2 = img_width
+                new_x1 = img_width - actual_size
 
-        # Корректируем по Y
-        if new_y1 < 0:
-            offset = -new_y1
-            new_y1 += offset
-            new_y2 += offset
-        if new_y2 > img_height:
-            offset = new_y2 - img_height
-            new_y1 -= offset
-            new_y2 -= offset
-            # Повторная проверка верхней границы
-            if new_y1 < 0:
-                new_y1 = 0
-                new_y2 = min(img_height, new_y1 + final_size)
-
-        # Финальная проверка границ
-        new_x1 = max(0, new_x1)
-        new_y1 = max(0, new_y1)
-        new_x2 = min(img_width, new_x2)
-        new_y2 = min(img_height, new_y2)
-
-        # Убедимся, что это квадрат
-        final_actual_size = min(new_x2 - new_x1, new_y2 - new_y1)
-
-        # Центрируем по X
-        center_x_actual = (new_x1 + new_x2) // 2
-        new_x1 = center_x_actual - final_actual_size // 2
-        new_x2 = new_x1 + final_actual_size
-
-        # Центрируем по Y
-        center_y_actual = (new_y1 + new_y2) // 2
-        new_y1 = center_y_actual - final_actual_size // 2
-        new_y2 = new_y1 + final_actual_size
-
-        # Финальная проверка
-        new_x1 = max(0, new_x1)
-        new_y1 = max(0, new_y1)
-        new_x2 = min(img_width, new_x2)
-        new_y2 = min(img_height, new_y2)
+            new_y1 = max(0, center_y - actual_size // 2)
+            new_y2 = new_y1 + actual_size
+            if new_y2 > img_height:
+                new_y2 = img_height
+                new_y1 = img_height - actual_size
 
         return (int(new_x1), int(new_y1), int(new_x2), int(new_y2))
 
@@ -260,42 +225,37 @@ class DefaultBoundingBoxProcessor(BoundingBoxProcessor):
 # Реализация для файловой системы
 class OSFileSystem(FileSystem):
     def get_image_files(self, path: str) -> List[str]:
-        import os
         image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.gif'}
 
         if not self.exists(path):
             return []
 
-        if os.path.isfile(path):
+        if not self.is_directory(path):
             _, ext = os.path.splitext(path.lower())
-            if ext in image_extensions:
-                return [path]
-            return []
+            return [path] if ext in image_extensions else []
 
         images = []
-        for filename in os.listdir(path):
-            file_path = os.path.join(path, filename)
-            if os.path.isfile(file_path):
-                _, ext = os.path.splitext(filename.lower())
+        for entry in os.scandir(path):
+            if entry.is_file():
+                _, ext = os.path.splitext(entry.name.lower())
                 if ext in image_extensions:
-                    images.append(file_path)
+                    images.append(entry.path)
         return images
 
     def create_directory(self, path: str) -> None:
-        import os
         os.makedirs(path, exist_ok=True)
 
     def exists(self, path: str) -> bool:
-        import os
         return os.path.exists(path)
 
     def is_directory(self, path: str) -> bool:
-        import os
         return os.path.isdir(path)
 
     def get_directory(self, path: str) -> str:
-        import os
         return os.path.dirname(path)
+
+    def get_basename(self, path: str) -> str:
+        return os.path.splitext(os.path.basename(path))[0]
 
 
 class FaceProcessingApplication:
@@ -331,14 +291,8 @@ class FaceProcessingApplication:
             else:
                 output_dir = self.file_system.get_directory(input_path)
 
-        # Создаем директорию для сохранения, если необходимо
-        if not self.file_system.exists(output_dir):
-            self.file_system.create_directory(output_dir)
-            print(f"Создана директория для сохранения: {output_dir}")
-        elif not self.file_system.is_directory(output_dir):
-            print(f"Ошибка: Путь {output_dir} не является директорией")
-            return False
-
+        # Создаем директорию для сохранения
+        self.file_system.create_directory(output_dir)
         print(f"Директория для сохранения результатов: {output_dir}")
 
         # Обрабатываем каждое изображение
@@ -357,15 +311,18 @@ class FaceProcessingApplication:
                 print(f"Найдено {len(boxes)} лиц, объединено в {len(merged_boxes)} областей")
 
                 # Обрезка и сохранение лиц
-                image_name = os.path.splitext(os.path.basename(img_path))[0]
+                image_name = self.file_system.get_basename(img_path)
                 for i, bbox in enumerate(merged_boxes):
-                    # Рассчитываем координаты квадратной области с 25% отступами
-                    x1, y1, x2, y2 = self.bbox_processor.calculate_square_crop(
-                        bbox, image_size
-                    )
+                    # Рассчитываем координаты квадратной области
+                    crop_coords = self.bbox_processor.calculate_square_crop(bbox, image_size)
+
+                    # Проверка валидности координат
+                    if crop_coords[2] <= crop_coords[0] or crop_coords[3] <= crop_coords[1]:
+                        print(f"Пропуск невалидной области: {crop_coords}")
+                        continue
 
                     # Обрезаем квадратную область
-                    face_image = original_image.crop((x1, y1, x2, y2))
+                    face_image = original_image.crop(crop_coords)
 
                     # Сохраняем обрезанное лицо
                     face_filename = f"{image_name}_face_{i + 1}.jpg"
@@ -375,7 +332,6 @@ class FaceProcessingApplication:
 
             except Exception as e:
                 print(f"Ошибка обработки файла {img_path}: {e}")
-                continue
 
         print("\nОбработка завершена!")
         return True
@@ -387,8 +343,6 @@ class ApplicationFactory:
     @staticmethod
     def create_default(model_path: str = None) -> FaceProcessingApplication:
         """Создает экземпляр приложения с дефолтными зависимостями"""
-        import os
-
         # Определяем путь к модели, если не указан
         if model_path is None:
             script_dir = os.path.dirname(os.path.abspath(__file__))
