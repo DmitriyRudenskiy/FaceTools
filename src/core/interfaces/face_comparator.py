@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Tuple, List
 
 
 class FaceComparator(ABC):
@@ -11,6 +11,6 @@ class FaceComparator(ABC):
         pass
 
     @abstractmethod
-    def batch_compare(self, image_paths: list) -> list:
-        """Сравнивает все изображения между собой"""
+    def batch_compare(self, image_paths: List[str]) -> List[List[Tuple[bool, float]]]:
+        """Сравнивает все изображения между собой и возвращает матрицу сравнения"""
         pass

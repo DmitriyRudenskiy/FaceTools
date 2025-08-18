@@ -10,3 +10,4 @@ python /Users/user/PycharmProjects/FaceTools/cli/face_cluster.py -s '/Users/user
 groups.json -> public/show_groups.html
 
 # Анализируем группу
+python /Users/user/PycharmProjects/FaceTools/cli/deepface_face_cluster.py -s '/Users/user/Downloads/_face_Lea E/grouped_photos/lea_e_00271_face_1'

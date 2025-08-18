@@ -6,6 +6,7 @@ from src.infrastructure.persistence.file_system_organizer import FileSystemOrgan
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
 from src.infrastructure.clustering.reference_table_printer import ReferenceTablePrinter
 from src.infrastructure.persistence.group_organizer import GroupOrganizer
+from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
 
 class DependencyInjector:
     """Контейнер зависимостей для всего приложения"""
@@ -31,3 +32,9 @@ class DependencyInjector:
     def get_group_organizer(self, groups_data, destination_directory):
         """Создает и возвращает GroupOrganizer"""
         return GroupOrganizer(groups_data, destination_directory)
+
+    # В класс DependencyInjector добавляем новый метод:
+    def get_deepface_face_comparator(self) -> DeepFaceFaceComparator:
+        """Создает и возвращает компаратор на основе DeepFace"""
+        from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
+        return DeepFaceFaceComparator()

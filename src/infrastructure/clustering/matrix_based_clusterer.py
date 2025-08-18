@@ -10,6 +10,9 @@ from typing import List
 from src.domain.cluster import Cluster, ClusteringResult
 from src.core.interfaces.clusterer import Clusterer
 from src.core.interfaces.face_comparator import FaceComparator
+from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
+import numpy as np
+from typing import List, Tuple, Optional, Any
 
 # Просто пример для демонстрации
 class MockComparator:
@@ -20,16 +23,61 @@ class MockComparator:
         # В реальности это может быть расстояние между изображениями i и j
         return np.random.uniform(0, 1)
 
+# Предполагаемые импорты для исключений, если они используются
+# from src.core.exceptions.clustering_error import ClusteringError
+
 class CompareMatrix:
     """
-    Класс для работы с матрицей сравнения лиц.
-    Реализует заполнение, анализ и сохранение матрицы схожести.
+    Матрица для хранения результатов сравнения изображений.
+    Каждый элемент может содержать [bool, float] или None.
     """
 
     def __init__(self, size: int):
-        """Инициализирует матрицу сравнения заданного размера"""
-        self.matrix = np.zeros((size, size))
-        self.legend = []  # Список путей к изображениям
+        """
+        Инициализирует квадратную матрицу размером size x size.
+
+        Args:
+            size (int): Размер матрицы.
+        """
+        # Используем dtype=object, чтобы хранить списки [bool, float] или None
+        # np.full с None корректно создает массив объектов
+        self.size = size
+        self.matrix = np.full((size, size), None, dtype=object) # Рекомендуемый способ
+
+    def set_value(self, i: int, j: int, value: Optional[List[Any]]):
+        """
+        Устанавливает значение в ячейку матрицы.
+
+        Args:
+            i (int): Индекс строки.
+            j (int): Индекс столбца.
+            value (Optional[List[Any]]): Значение для установки, например, [True, 0.5] или None.
+        """
+        if not (0 <= i < self.size and 0 <= j < self.size):
+            # Можно выбросить исключение, если индексы вне диапазона
+            # raise IndexError(f"Index out of bounds: i={i}, j={j}, size={self.size}")
+            print(f"Warning: Index out of bounds in set_value: i={i}, j={j}")
+            return
+        # Теперь это должно работать, так как dtype=object
+        self.matrix[i, j] = value
+
+    def get_value(self, i: int, j: int) -> Optional[List[Any]]:
+        """
+        Получает значение из ячейки матрицы.
+
+        Args:
+            i (int): Индекс строки.
+            j (int): Индекс столбца.
+
+        Returns:
+            Optional[List[Any]]: Значение в ячейке или None.
+        """
+        if not (0 <= i < self.size and 0 <= j < self.size):
+             # Можно выбросить исключение, если индексы вне диапазона
+            # raise IndexError(f"Index out of bounds: i={i}, j={j}, size={self.size}")
+            print(f"Warning: Index out of bounds in get_value: i={i}, j={j}")
+            return None
+        return self.matrix[i, j]
 
     def fill(self, comparator: FaceComparator, image_paths: List[str]) -> None:
         """
@@ -275,3 +323,28 @@ class MatrixClusterer(Clusterer):
         # Преобразуем в результат кластеризации
         result = matrix.to_clustering_result(self.threshold, image_paths)
         return result
+
+    # В существующий класс CompareMatrix добавляем методы:
+
+    def fill_deepface(self, comparator: DeepFaceFaceComparator, image_paths: List[str]) -> None:
+        """
+        Заполняет матрицу схожести на основе DeepFace компаратора
+        Args:
+            comparator: Реализация DeepFaceFaceComparator для сравнения лиц
+            image_paths: Список путей к изображениям
+        """
+        size = self.matrix.shape[0]
+        self.legend = image_paths[:size]  # Копируем пути к изображениям
+
+        # Инициализируем компаратор
+        comparator.init(image_paths)
+
+        for i in range(size):
+            for j in range(i, size):  # Заполняем только верхний треугольник
+                if i == j:
+                    self.matrix[i, j] = np.nan  # Диагональ - NaN
+                else:
+                    # Получаем расстояние напрямую
+                    distance = comparator._compare_by_index(i, j)
+                    self.matrix[i, j] = distance
+                    self.matrix[j, i] = distance  # Симметричная матрица
