@@ -3,7 +3,7 @@ from src.core.interfaces.clusterer import Clusterer
 from src.domain.cluster import Cluster, ClusteringResult
 import os
 import time
-from typing import List, Dict, Any
+from typing import List
 
 
 class ImageGrouper(Clusterer):

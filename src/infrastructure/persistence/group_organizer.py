@@ -5,7 +5,6 @@
 import os
 import shutil
 import time
-from typing import List, Dict
 
 
 class GroupOrganizer:
@@ -71,6 +70,6 @@ class GroupOrganizer:
 
         end_time = time.time()
         elapsed_time = end_time - start_time
-        print(f"=== Организация файлов завершена ===")
+        print("=== Организация файлов завершена ===")
         print(f"Всего скопировано файлов: {total_copied}")
         print(f"Время на организацию: {elapsed_time:.2f} секунд")

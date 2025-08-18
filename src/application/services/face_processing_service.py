@@ -1,7 +1,8 @@
 from typing import List, Tuple
 import numpy as np
-from src.core.interfaces import FaceDetector, ImageLoader, ResultSaver, FileOrganizer
+from src.core.interfaces import FaceDetector, ImageLoader, FileOrganizer
 from src.domain.face import Face
+from typing import Any
 
 
 class FaceProcessingService:
@@ -10,7 +11,8 @@ class FaceProcessingService:
         file_organizer: FileOrganizer,
         face_detector: FaceDetector,
         image_loader: ImageLoader,
-        result_saver: ResultSaver,
+        # Добавляем feature_extractor в конструктор
+        feature_extractor: Any,  # Или FeatureExtractor, если он определен
     ):
         self.image_loader = image_loader
         self.face_detector = face_detector

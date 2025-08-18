@@ -1,7 +1,6 @@
 from src.core.interfaces.face_comparator import FaceComparator
 import face_recognition
 import os
-from typing import List, Tuple
 
 
 class FaceRecognitionFaceComparator(FaceComparator):

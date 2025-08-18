@@ -11,8 +11,7 @@ from src.domain.cluster import Cluster, ClusteringResult
 from src.core.interfaces.clusterer import Clusterer
 from src.core.interfaces.face_comparator import FaceComparator
 from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
-import numpy as np
-from typing import List, Tuple, Optional, Any
+from typing import Optional, Any
 
 
 # Просто пример для демонстрации

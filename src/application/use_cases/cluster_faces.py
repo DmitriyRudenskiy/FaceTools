@@ -1,7 +1,10 @@
-from typing import Dict, Any, Optional
+# src/application/use_cases/cluster_faces.py
+from typing import Dict, Any, Optional, List
 import time
-from domain.result import ClusteringResult
-from application.services import FaceProcessingService, FaceClusteringService
+
+# Используем абсолютные импорты, как в остальной части проекта
+from src.domain.cluster import ClusteringResult
+from src.application.services import FaceProcessingService, FaceClusteringService
 from src.core.interfaces import ResultSaver, FileOrganizer
 
 
@@ -20,8 +23,8 @@ class ClusterFacesUseCase:
         self.result_saver = result_saver
         self.file_organizer = file_organizer
         self.similarity_matrix = None
-        self.faces = []
-        self.labels = []
+        self.faces: List = []  # Явно указываем тип
+        self.labels: List = []  # Явно указываем тип
 
     def execute(
         self,
@@ -52,42 +55,38 @@ class ClusterFacesUseCase:
         )
 
         # 3. Подготовка и сохранение результатов
+        # Передаем необходимые данные в ClusteringResult
         result = ClusteringResult(
-            faces=self.faces,
-            labels=self.labels,
-            optimal_k=optimal_k,
-            input_dir=input_dir,
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
+            total_clusters=optimal_k if optimal_k > 0 else 0,
+            unrecognized_count=0,  # Этот параметр требует доработки логики
+            clusters=[],  # Этот параметр требует доработки логики для заполнения
+            unrecognized_images=[],  # Этот параметр требует доработки логики
         )
 
         if output_json:
             self.result_saver.save(result, output_json_path)
+            pass
 
-        # 4. Организация файлов по группам (если требуется)
         if organize_files and dest_dir:
-            self.file_organizer.organize(result, dest_dir)
+            self.file_organizer.organize_by_clusters(result.clusters, dest_dir)
+            pass
 
-        elapsed_time = time.time() - start_time
         return {
             "total_faces": len(self.faces),
             "total_groups": optimal_k,
-            "elapsed_time": elapsed_time,
+            "elapsed_time": time.time() - start_time,
+            # "clustering_result": result # Можно добавить для отладки
         }
 
-    def display_similarity_matrix(self):
-        """Отображает матрицу схожести."""
-        # Логика отображения матрицы
-        pass
-
-    def display_reference_table(self):
-        """Отображает таблицу сопоставления с эталонами."""
-        # Логика отображения таблицы
-        pass
-
     @classmethod
-    def create_default(
+    def with_default_dependencies(
         cls, ctx_id: int = 0, det_size: tuple = (640, 640), det_thresh: float = 0.5
     ):
         """Создает экземпляр use case с дефолтными зависимостями."""
+        # Используем абсолютный импорт для DependencyInjector
+        from src.config.dependency_injector import DependencyInjector
+
         face_processing_service = DependencyInjector.create_face_processing_service(
             ctx_id, det_size, det_thresh
         )

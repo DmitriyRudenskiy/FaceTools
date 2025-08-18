@@ -1,4 +1,3 @@
-from typing import List, Dict, Any, Optional
 import os
 import time
 import json
@@ -10,12 +9,7 @@ from src.core.interfaces import (
     FileOrganizer,
     ResultSaver,
 )
-from src.core.exceptions import FaceDetectionError, FileHandlingError, ClusteringError
-from src.domain.image_model import Image
-from src.domain.face import Face, BoundingBox
-from src.infrastructure.comparison.face_recognition import FaceRecognitionFaceComparator
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
-from src.infrastructure.persistence.group_organizer import GroupOrganizer
 
 
 class FaceDetectionService:
@@ -463,7 +457,7 @@ class FaceDetectionService:
 
         end_time = time.time()
         elapsed_time = end_time - start_time
-        print(f"=== Организация файлов завершена ===")
+        print("=== Организация файлов завершена ===")
         print(f"Всего скопировано файлов: {total_copied}")
         print(f"Время на организацию: {elapsed_time:.2f} секунд")
 
@@ -501,7 +495,7 @@ class FaceDetectionService:
         try:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(result_json, f, ensure_ascii=False, indent=4)
-            print(f"=== Анализ завершен ===")
+            print("=== Анализ завершен ===")
             print(f"Результаты сохранены в файл: {output_file}")
             print(f"Общее время выполнения: {total_elapsed_time:.2f} секунд")
             print(f"Обработано изображений: {num_loaded_images}")
@@ -514,7 +508,7 @@ class FaceDetectionService:
         try:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(result_json, f, ensure_ascii=False, indent=4)
-            print(f"=== Анализ завершен ===")
+            print("=== Анализ завершен ===")
             print(f"Результаты сохранены в файл: {output_file}")
             print(f"Общее время выполнения: {total_elapsed_time:.2f} секунд")
             print(f"Обработано изображений: {num_loaded_images}")

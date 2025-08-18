@@ -4,6 +4,7 @@ from typing import List, Dict
 from src.core.interfaces.face_detector import FaceDetector
 from src.core.exceptions.face_detection_error import FaceDetectionError
 from src.domain.face import Face, BoundingBox, Landmarks
+from typing import Tuple
 
 
 class InsightFaceDetector(FaceDetector):

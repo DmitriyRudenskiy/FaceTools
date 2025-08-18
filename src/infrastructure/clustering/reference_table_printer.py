@@ -2,7 +2,6 @@
 Модуль для создания таблицы сопоставления с эталонами.
 """
 
-from typing import List, Dict, Any
 import os
 
 
