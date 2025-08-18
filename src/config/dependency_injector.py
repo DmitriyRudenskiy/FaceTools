@@ -1,15 +1,15 @@
-from src.application.services.face_detection_service import \
-    FaceDetectionService  # <<<--- НОВОЕ ИМЯ ФАЙЛА
+from src.application.services.face_detection_service import (
+    FaceDetectionService,
+)  # <<<--- НОВОЕ ИМЯ ФАЙЛА
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
-from src.infrastructure.clustering.reference_table_printer import \
-    ReferenceTablePrinter
-from src.infrastructure.comparison.deepface_comparator import \
-    DeepFaceFaceComparator
+from src.infrastructure.clustering.reference_table_printer import ReferenceTablePrinter
+from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
 from src.infrastructure.detection.yolo_detector import (
-    DefaultBoundingBoxProcessor, YOLOFaceDetector)
+    DefaultBoundingBoxProcessor,
+    YOLOFaceDetector,
+)
 from src.infrastructure.image.os_image_loader import OSImageLoader
-from src.infrastructure.persistence.file_system_organizer import \
-    FileSystemOrganizer
+from src.infrastructure.persistence.file_system_organizer import FileSystemOrganizer
 from src.infrastructure.persistence.group_organizer import GroupOrganizer
 
 
@@ -46,7 +46,8 @@ class DependencyInjector:
     # В класс DependencyInjector добавляем новый метод:
     def get_deepface_face_comparator(self) -> DeepFaceFaceComparator:
         """Создает и возвращает компаратор на основе DeepFace"""
-        from src.infrastructure.comparison.deepface_comparator import \
-            DeepFaceFaceComparator
+        from src.infrastructure.comparison.deepface_comparator import (
+            DeepFaceFaceComparator,
+        )
 
         return DeepFaceFaceComparator()

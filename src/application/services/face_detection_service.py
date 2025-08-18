@@ -3,8 +3,13 @@ import os
 import shutil
 import time
 
-from src.core.interfaces import (BoundingBoxProcessor, FaceDetector,
-                                 FileOrganizer, ImageLoader, ResultSaver)
+from src.core.interfaces import (
+    BoundingBoxProcessor,
+    FaceDetector,
+    FileOrganizer,
+    ImageLoader,
+    ResultSaver,
+)
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
 
 

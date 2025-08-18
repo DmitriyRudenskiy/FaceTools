@@ -12,8 +12,7 @@ import numpy as np
 from src.core.interfaces.clusterer import Clusterer
 from src.core.interfaces.face_comparator import FaceComparator
 from src.domain.cluster import Cluster, ClusteringResult
-from src.infrastructure.comparison.deepface_comparator import \
-    DeepFaceFaceComparator
+from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
 
 
 # Просто пример для демонстрации

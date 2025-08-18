@@ -7,7 +7,9 @@ from typing import Any, List, Tuple
 from ultralytics import YOLO
 
 from src.core.interfaces import (  # Импорт из core.interfaces
-    BoundingBoxProcessor, FaceDetector)
+    BoundingBoxProcessor,
+    FaceDetector,
+)
 from src.domain.face import BoundingBox
 
 
