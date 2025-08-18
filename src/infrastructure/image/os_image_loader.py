@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Tuple
 from src.core.exceptions.file_handling_error import FileHandlingError
 from src.core.interfaces.image_loader import ImageLoader
-from src.domain.image import Image, ImageInfo
+from src.domain.image_model import Image, ImageInfo
 from PIL import Image as PILImage
 
 class OSImageLoader(ImageLoader):

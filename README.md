@@ -33,7 +33,7 @@ FaceCluster - это инструмент для автоматической г
 ```bash
 # Клонируем репозиторий
 git clone https://github.com/your-username/FaceCluster.git
-cd FaceCluster
+cd FaceTools
 
 # Создаем виртуальное окружение (рекомендуется)
 python -m venv venv

@@ -4,4 +4,9 @@
 python /Users/user/PycharmProjects/FaceCluster/cli/extract_faces.py '/Users/user/Downloads/_face_Lea E'
 
 # Группируем лица по схожести
-python /Users/user/PycharmProjects/FaceCluster/application/cli/face_cluster.py '/Users/user/Downloads/_face_Lea E/faces'
+python /Users/user/PycharmProjects/FaceTools/cli/face_cluster.py -s '/Users/user/Downloads/_face_Lea E/faces' -d ./grouped_photos
+
+# Открываем страницу и загружаем созданный файл
+groups.json -> public/show_groups.html
+
+# Анализируем группу

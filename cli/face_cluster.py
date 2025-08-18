@@ -17,9 +17,10 @@ if __name__ == "__main__":
     root_dir = current_dir
     while True:
         # Проверяем наличие признаков корневой директории проекта
-        has_core = (root_dir / "core").is_dir()
-        has_domain = (root_dir / "domain").is_dir()
-        has_infrastructure = (root_dir / "infrastructure").is_dir()
+        src_dir = root_dir / "src"
+        has_core = (src_dir / "core").is_dir()
+        has_domain = (src_dir / "domain").is_dir()
+        has_infrastructure = (src_dir / "infrastructure").is_dir()
 
         if has_core and has_domain and has_infrastructure:
             break
@@ -50,8 +51,9 @@ def main():
     parser.add_argument('-s', '--src', required=True, help='Путь к директории с изображениями')
     parser.add_argument('-o', '--output', default='groups.json', help='Путь к выходному JSON файлу')
     parser.add_argument('-d', '--dest', help='Директория для организации файлов по группам')
-    parser.add_argument('-r', '--references', action='store_true', help='Отображать таблицу сопоставления с эталонами')
-
+    parser.add_argument('-m', '--show-matrix', action='store_true', help='Отображать матрицу схожести в консоли')
+    parser.add_argument('-r', '--references', action='store_true',
+                        help="Отображать таблицу сопоставления с эталонами (файлы, начинающиеся с 'refer_')")
     args = parser.parse_args()
 
     try:
@@ -75,7 +77,8 @@ def main():
 
     # Запускаем процесс
     try:
-        success = service.process(args.src, args.output, args.dest)
+        # Передаем все аргументы, которые ожидает метод process
+        success = service.process(args.src, args.output, args.dest, args.show_matrix, args.references)
     except Exception as e:
         print(f"[ERROR] Ошибка обработки изображений: {str(e)}")
         return 1

@@ -481,7 +481,7 @@
                     const groupSize = group.size || (group.images ? group.images.length : 0);
 
                     // Используем full_path для всех изображений
-                    const imageFullPaths = (group.images || []).map(imgObj => imgObj.full_path || imgObj.filename || 'unknown.jpg');
+                    const imageFullPaths = group.images;
 
                     // Определяем представителя (первое изображение)
                     let representativeImage = '';
@@ -490,7 +490,7 @@
 
                     if (group.images && group.images.length > 0) {
                         const firstImage = group.images[0];
-                        representativeFilename = firstImage.filename || 'unknown.jpg';
+                        representativeFilename = firstImage.filename || 'not_found.jpg';
                         representativeImage = firstImage.full_path || representativeFilename;
                     }
 
@@ -524,7 +524,7 @@
                             </div>
                             <div class="items-grid">
                                 ${(group.images || []).map((imgObj, imgIndex) => {
-                                    const imageName = imgObj.filename || 'unknown.jpg';
+                                    const imageName = imgObj;
                                     // Используем full_path как основной путь к изображению
                                     const imagePath = imgObj.full_path || imageName;
                                     const isRepresentative = imgIndex === representativeIndex;

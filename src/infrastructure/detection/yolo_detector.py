@@ -13,11 +13,11 @@ class YOLOFaceDetector(FaceDetector):
         # --- Способ 1a: Использовать путь относительно корня проекта ---
         if model_path is None:
             # Предполагаем, что модель лежит в <корень_проекта>/models/yolov8n-face.pt
-            # __file__ = .../FaceCluster/src/infrastructure/detection/yolo_detector.py
+            # __file__ = .../FaceTools/src/infrastructure/detection/yolo_detector.py
             # parents[0] = detection
             # parents[1] = infrastructure
             # parents[2] = src
-            # parents[3] = FaceCluster (корень проекта)
+            # parents[3] = FaceTools (корень проекта)
             project_root = Path(__file__).resolve().parents[3] # src/infrastructure/detection -> project_root
             model_path = project_root / "models" / "yolov8n-face.pt"
         model_path = str(model_path) # Преобразуем Path в строку
