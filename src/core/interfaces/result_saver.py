@@ -8,4 +8,3 @@ class ResultSaver(ABC):
     @abstractmethod
     def save(self, image: Any, path: str) -> None:
         """Сохраняет результат обработки в файл"""
-        pass

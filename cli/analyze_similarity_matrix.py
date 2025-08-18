@@ -1,4 +1,3 @@
-import sys
 import os
 
 from utils.compare_matrix import CompareMatrix
@@ -22,11 +21,11 @@ if __name__ == "__main__":
 
     # Получение подматриц с легендами
     submatrices = matrix.split_to_matrices(threshold)
-    print(f"\nПодматрицы с легендами:")
+    print("\nПодматрицы с легендами:")
     for i, submatrix_info in enumerate(submatrices):
         print(f"Подматрица {i+1}:")
         print(f"  Индексы: {submatrix_info['indices']}")
         #print(f"  Файлы: {[os.path.basename(path) for path in submatrix_info['legend']]}")
-        print(f"  Матрица:")
+        print("  Матрица:")
         print(submatrix_info['matrix'])
         print()

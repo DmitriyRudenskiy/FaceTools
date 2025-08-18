@@ -1,9 +1,10 @@
 # src/infrastructure/clustering/legacy_image_grouper.py
-from src.core.interfaces.clusterer import Clusterer
-from src.domain.cluster import Cluster, ClusteringResult
 import os
 import time
 from typing import List
+
+from src.core.interfaces.clusterer import Clusterer
+from src.domain.cluster import Cluster, ClusteringResult
 
 
 class ImageGrouper(Clusterer):

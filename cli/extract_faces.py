@@ -5,7 +5,6 @@ python -m application.cli.run <input_path> [output_dir]
 python /path/to/extract_faces.py <input_path> [output_dir]
 """
 import sys
-import argparse
 
 
 def main():

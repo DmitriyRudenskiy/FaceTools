@@ -3,15 +3,17 @@
 Содержит реализацию CompareMatrix - инструмента для работы с матрицей схожести лиц.
 """
 
-import numpy as np
-import os
 import json
-from typing import List
-from src.domain.cluster import Cluster, ClusteringResult
+import os
+from typing import Any, List, Optional
+
+import numpy as np
+
 from src.core.interfaces.clusterer import Clusterer
 from src.core.interfaces.face_comparator import FaceComparator
-from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
-from typing import Optional, Any
+from src.domain.cluster import Cluster, ClusteringResult
+from src.infrastructure.comparison.deepface_comparator import \
+    DeepFaceFaceComparator
 
 
 # Просто пример для демонстрации

@@ -1,7 +1,8 @@
-from src.core.interfaces.file_organizer import FileOrganizer
 import os
 import shutil
-from typing import List, Dict
+from typing import Dict, List
+
+from src.core.interfaces.file_organizer import FileOrganizer
 
 
 class FileSystemOrganizer(FileOrganizer):

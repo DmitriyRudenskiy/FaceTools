@@ -1,11 +1,12 @@
 # src/application/use_cases/cluster_faces.py
-from typing import Dict, Any, Optional, List
 import time
+from typing import Any, Dict, List, Optional
 
+from src.application.services import (FaceClusteringService,
+                                      FaceProcessingService)
+from src.core.interfaces import FileOrganizer, ResultSaver
 # Используем абсолютные импорты, как в остальной части проекта
 from src.domain.cluster import ClusteringResult
-from src.application.services import FaceProcessingService, FaceClusteringService
-from src.core.interfaces import ResultSaver, FileOrganizer
 
 
 class ClusterFacesUseCase:
@@ -66,11 +67,9 @@ class ClusterFacesUseCase:
 
         if output_json:
             self.result_saver.save(result, output_json_path)
-            pass
 
         if organize_files and dest_dir:
             self.file_organizer.organize_by_clusters(result.clusters, dest_dir)
-            pass
 
         return {
             "total_faces": len(self.faces),

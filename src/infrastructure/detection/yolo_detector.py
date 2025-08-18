@@ -1,14 +1,14 @@
 # src/infrastructure/detection/yolo_detector.py
 
-from src.core.interfaces import (
-    FaceDetector,
-    BoundingBoxProcessor,
-)  # Импорт из core.interfaces
-from src.domain.face import BoundingBox
-from typing import List, Tuple, Any
-from ultralytics import YOLO
 import os
 from pathlib import Path
+from typing import Any, List, Tuple
+
+from ultralytics import YOLO
+
+from src.core.interfaces import (  # Импорт из core.interfaces
+    BoundingBoxProcessor, FaceDetector)
+from src.domain.face import BoundingBox
 
 
 class YOLOFaceDetector(FaceDetector):

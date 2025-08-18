@@ -3,10 +3,10 @@
 Содержит общий код для всех CLI-скриптов, избегая дублирования.
 """
 
-import sys
 import argparse
+import sys
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple
 
 
 def setup_project_environment() -> Tuple[Path, bool]:

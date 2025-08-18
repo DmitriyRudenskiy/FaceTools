@@ -1,10 +1,11 @@
+from typing import Dict, List, Tuple
+
 import insightface
 import numpy as np
-from typing import List, Dict
-from src.core.interfaces.face_detector import FaceDetector
+
 from src.core.exceptions.face_detection_error import FaceDetectionError
-from src.domain.face import Face, BoundingBox, Landmarks
-from typing import Tuple
+from src.core.interfaces.face_detector import FaceDetector
+from src.domain.face import BoundingBox, Face, Landmarks
 
 
 class InsightFaceDetector(FaceDetector):

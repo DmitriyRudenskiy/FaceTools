@@ -1,7 +1,8 @@
 # src/infrastructure/comparison/deepface_comparator.py
+from typing import List, Tuple
+
 import numpy as np
 from deepface import DeepFace
-from typing import Tuple, List
 
 
 class DeepFaceFaceComparator:

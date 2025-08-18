@@ -8,4 +8,3 @@ class ImageLoader(ABC):
     @abstractmethod
     def load(self, path: str) -> Any:
         """Загружает изображение из файла"""
-        pass

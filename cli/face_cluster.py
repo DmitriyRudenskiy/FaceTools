@@ -3,8 +3,8 @@
 Инструмент для кластеризации лиц по схожести.
 Использование: python -m application.cli.face_cluster <source_dir> [options]
 """
-import sys
 import argparse
+import sys
 from pathlib import Path
 
 # Улучшенная обработка добавления корневой директории в sys.path

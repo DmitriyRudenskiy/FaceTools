@@ -1,6 +1,8 @@
-from src.core.interfaces.face_comparator import FaceComparator
-import face_recognition
 import os
+
+import face_recognition
+
+from src.core.interfaces.face_comparator import FaceComparator
 
 
 class FaceRecognitionFaceComparator(FaceComparator):

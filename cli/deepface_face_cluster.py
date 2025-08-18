@@ -2,15 +2,16 @@
 """Инструмент для кластеризации лиц по схожести с использованием DeepFace.
 Использование: python cli/deepface_face_cluster.py -s <source_dir> [options]"""
 
+import argparse
+import glob
+import json
+import os
 # --- Стандартные импорты ---
 import sys
-import argparse
-import os
-import glob
 import time
-import json
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
+
 # Импорт numpy для использования np.dot
 import numpy as np
 
@@ -48,9 +49,10 @@ if str(root_dir) not in sys.path:
 try:
     # --- Импорты из проекта ---
     # Импортируем правильный DeepFaceFaceComparator
-    from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
-    from src.infrastructure.clustering.matrix_based_clusterer import CompareMatrix
-    from src.domain.cluster import ClusteringResult
+    from src.infrastructure.clustering.matrix_based_clusterer import \
+        CompareMatrix
+    from src.infrastructure.comparison.deepface_comparator import \
+        DeepFaceFaceComparator
     from src.infrastructure.persistence.group_organizer import GroupOrganizer
 except ImportError as e:
     print(f"[ERROR] Не удалось импортировать зависимости: {str(e)}")

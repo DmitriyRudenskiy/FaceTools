@@ -1,14 +1,10 @@
-import os
-import time
 import json
+import os
 import shutil
-from src.core.interfaces import (
-    FaceDetector,
-    BoundingBoxProcessor,
-    ImageLoader,
-    FileOrganizer,
-    ResultSaver,
-)
+import time
+
+from src.core.interfaces import (BoundingBoxProcessor, FaceDetector,
+                                 FileOrganizer, ImageLoader, ResultSaver)
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
 
 

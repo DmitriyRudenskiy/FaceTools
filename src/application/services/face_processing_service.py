@@ -1,8 +1,9 @@
-from typing import List, Tuple
+from typing import Any, List, Tuple
+
 import numpy as np
-from src.core.interfaces import FaceDetector, ImageLoader, FileOrganizer
+
+from src.core.interfaces import FaceDetector, FileOrganizer, ImageLoader
 from src.domain.face import Face
-from typing import Any
 
 
 class FaceProcessingService:
