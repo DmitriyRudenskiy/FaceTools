@@ -1,14 +1,19 @@
 # src/infrastructure/detection/yolo_detector.py
 
-from src.core.interfaces import FaceDetector, BoundingBoxProcessor  # Импорт из core.interfaces
+from src.core.interfaces import (
+    FaceDetector,
+    BoundingBoxProcessor,
+)  # Импорт из core.interfaces
 from src.domain.face import BoundingBox
 from typing import List, Tuple, Any
 from ultralytics import YOLO
 import os
 from pathlib import Path
 
+
 class YOLOFaceDetector(FaceDetector):
     """Детекция лиц с использованием YOLO"""
+
     def __init__(self, model_path: str = None):
         # --- Способ 1a: Использовать путь относительно корня проекта ---
         if model_path is None:
@@ -18,9 +23,11 @@ class YOLOFaceDetector(FaceDetector):
             # parents[1] = infrastructure
             # parents[2] = src
             # parents[3] = FaceTools (корень проекта)
-            project_root = Path(__file__).resolve().parents[3] # src/infrastructure/detection -> project_root
+            project_root = (
+                Path(__file__).resolve().parents[3]
+            )  # src/infrastructure/detection -> project_root
             model_path = project_root / "models" / "yolov8n-face.pt"
-        model_path = str(model_path) # Преобразуем Path в строку
+        model_path = str(model_path)  # Преобразуем Path в строку
 
         try:
             # Проверяем существование файла модели
@@ -29,7 +36,10 @@ class YOLOFaceDetector(FaceDetector):
             self.model = YOLO(model_path)
         except Exception as e:
             from src.core.exceptions import FaceDetectionError
-            raise FaceDetectionError(f"Ошибка инициализации модели YOLO: {str(e)}") from e
+
+            raise FaceDetectionError(
+                f"Ошибка инициализации модели YOLO: {str(e)}"
+            ) from e
 
     def detect(self, image: Any) -> List[BoundingBox]:
         try:
@@ -41,10 +51,13 @@ class YOLOFaceDetector(FaceDetector):
             return boxes
         except Exception as e:
             from src.core.exceptions import FaceDetectionError
+
             raise FaceDetectionError(f"Ошибка детекции лиц: {str(e)}") from e
+
 
 class DefaultBoundingBoxProcessor(BoundingBoxProcessor):
     """Обработка bounding box'ов"""
+
     def calculate_iou(self, box1: BoundingBox, box2: BoundingBox) -> float:
         x1_inter = max(box1.x1, box2.x1)
         y1_inter = max(box1.y1, box2.y1)
@@ -55,7 +68,9 @@ class DefaultBoundingBoxProcessor(BoundingBoxProcessor):
         area2 = box2.width * box2.height
         return inter_area / (area1 + area2 - inter_area) if (area1 + area2) > 0 else 0
 
-    def merge_overlapping(self, boxes: List[BoundingBox], iou_threshold: float = 0.5) -> List[BoundingBox]:
+    def merge_overlapping(
+        self, boxes: List[BoundingBox], iou_threshold: float = 0.5
+    ) -> List[BoundingBox]:
         if not boxes:
             return []
         # Сортируем по площади (от большего к меньшему)
@@ -77,7 +92,9 @@ class DefaultBoundingBoxProcessor(BoundingBoxProcessor):
                 merged.append(box)
         return merged
 
-    def calculate_square_crop(self, bbox: BoundingBox, image_size: Tuple[int, int]) -> Tuple[int, int, int, int]:
+    def calculate_square_crop(
+        self, bbox: BoundingBox, image_size: Tuple[int, int]
+    ) -> Tuple[int, int, int, int]:
         """Рассчитывает квадратную область для обрезки лица"""
         x1, y1, x2, y2 = bbox.x1, bbox.y1, bbox.x2, bbox.y2
         img_w, img_h = image_size

@@ -9,9 +9,9 @@ from .image_loader import ImageLoader
 from .result_saver import ResultSaver
 
 __all__ = [
-    'FaceDetector',
-    'BoundingBoxProcessor',
-    'FileOrganizer',
-    'ImageLoader',
-    'ResultSaver'
+    "FaceDetector",
+    "BoundingBoxProcessor",
+    "FileOrganizer",
+    "ImageLoader",
+    "ResultSaver",
 ]

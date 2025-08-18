@@ -14,6 +14,7 @@ from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceCompar
 import numpy as np
 from typing import List, Tuple, Optional, Any
 
+
 # Просто пример для демонстрации
 class MockComparator:
     def get_image_path(self, index):
@@ -23,8 +24,10 @@ class MockComparator:
         # В реальности это может быть расстояние между изображениями i и j
         return np.random.uniform(0, 1)
 
+
 # Предполагаемые импорты для исключений, если они используются
 # from src.core.exceptions.clustering_error import ClusteringError
+
 
 class CompareMatrix:
     """
@@ -42,7 +45,7 @@ class CompareMatrix:
         # Используем dtype=object, чтобы хранить списки [bool, float] или None
         # np.full с None корректно создает массив объектов
         self.size = size
-        self.matrix = np.full((size, size), None, dtype=object) # Рекомендуемый способ
+        self.matrix = np.full((size, size), None, dtype=object)  # Рекомендуемый способ
 
     def set_value(self, i: int, j: int, value: Optional[List[Any]]):
         """
@@ -73,7 +76,7 @@ class CompareMatrix:
             Optional[List[Any]]: Значение в ячейке или None.
         """
         if not (0 <= i < self.size and 0 <= j < self.size):
-             # Можно выбросить исключение, если индексы вне диапазона
+            # Можно выбросить исключение, если индексы вне диапазона
             # raise IndexError(f"Index out of bounds: i={i}, j={j}, size={self.size}")
             print(f"Warning: Index out of bounds in get_value: i={i}, j={j}")
             return None
@@ -114,7 +117,7 @@ class CompareMatrix:
             linewidth=1000,
             precision=2,
             suppress=True,
-            formatter={'float_kind': lambda x: f'{x:1.2f}'}
+            formatter={"float_kind": lambda x: f"{x:1.2f}"},
         ):
             print(self.matrix)
 
@@ -164,7 +167,9 @@ class CompareMatrix:
 
         return groups
 
-    def to_clustering_result(self, threshold: float, image_paths: List[str]) -> ClusteringResult:
+    def to_clustering_result(
+        self, threshold: float, image_paths: List[str]
+    ) -> ClusteringResult:
         """
         Преобразует матрицу в результат кластеризации
 
@@ -177,7 +182,9 @@ class CompareMatrix:
         """
         groups = self.split(threshold)
         clusters = []
-        unrecognized_indices = set(range(len(image_paths))) - set(idx for group in groups for idx in group)
+        unrecognized_indices = set(range(len(image_paths))) - set(
+            idx for group in groups for idx in group
+        )
 
         # Создаем кластеры
         for i, group_indices in enumerate(groups):
@@ -193,29 +200,40 @@ class CompareMatrix:
             avg_similarity = 1.0 - (total_distance / count if count > 0 else 0.0)
 
             # Находим представителя группы (с минимальным средним расстоянием)
-            min_distance = float('inf')
+            min_distance = float("inf")
             representative_idx = group_indices[0]
             for idx in group_indices:
-                group_distance = sum(self.matrix[idx, other_idx] for other_idx in group_indices if idx != other_idx and not np.isnan(self.matrix[idx, other_idx]))
+                group_distance = sum(
+                    self.matrix[idx, other_idx]
+                    for other_idx in group_indices
+                    if idx != other_idx and not np.isnan(self.matrix[idx, other_idx])
+                )
                 if group_distance < min_distance:
                     min_distance = group_distance
                     representative_idx = idx
 
             # Создаем объект кластера
             representative_path = image_paths[representative_idx]
-            clusters.append(Cluster(
-                id=i + 1,
-                size=len(group_indices),
-                representative=os.path.basename(representative_path),
-                representative_path=representative_path,
-                members=[os.path.basename(image_paths[idx]) for idx in group_indices],
-                members_paths=[image_paths[idx] for idx in group_indices],
-                average_similarity=avg_similarity
-            ))
+            clusters.append(
+                Cluster(
+                    id=i + 1,
+                    size=len(group_indices),
+                    representative=os.path.basename(representative_path),
+                    representative_path=representative_path,
+                    members=[
+                        os.path.basename(image_paths[idx]) for idx in group_indices
+                    ],
+                    members_paths=[image_paths[idx] for idx in group_indices],
+                    average_similarity=avg_similarity,
+                )
+            )
 
         # Определяем нераспознанные изображения
         unrecognized_images = [
-            {"filename": os.path.basename(image_paths[idx]), "full_path": image_paths[idx]}
+            {
+                "filename": os.path.basename(image_paths[idx]),
+                "full_path": image_paths[idx],
+            }
             for idx in unrecognized_indices
         ]
 
@@ -224,7 +242,7 @@ class CompareMatrix:
             total_clusters=len(clusters),
             unrecognized_count=len(unrecognized_images),
             clusters=clusters,
-            unrecognized_images=unrecognized_images
+            unrecognized_images=unrecognized_images,
         )
 
     def save(self, filepath: str) -> None:
@@ -243,16 +261,18 @@ class CompareMatrix:
             # Заменяем NaN значения на null для JSON
             for i in range(len(matrix_list)):
                 for j in range(len(matrix_list[i])):
-                    if isinstance(matrix_list[i][j], float) and np.isnan(matrix_list[i][j]):
+                    if isinstance(matrix_list[i][j], float) and np.isnan(
+                        matrix_list[i][j]
+                    ):
                         matrix_list[i][j] = None
 
             data = {
-                'matrix': matrix_list,
-                'legend': self.legend,
-                'size': self.matrix.shape[0]
+                "matrix": matrix_list,
+                "legend": self.legend,
+                "size": self.matrix.shape[0],
             }
 
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             print(f"Матрица успешно сохранена в {filepath}")
@@ -270,11 +290,11 @@ class CompareMatrix:
             if not os.path.exists(filepath):
                 raise FileNotFoundError(f"Файл не найден: {filepath}")
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # Восстанавливаем матрицу из списка
-            matrix_list = data['matrix']
+            matrix_list = data["matrix"]
 
             # Заменяем null значения обратно на NaN
             for i in range(len(matrix_list)):
@@ -283,7 +303,7 @@ class CompareMatrix:
                         matrix_list[i][j] = np.nan
 
             self.matrix = np.array(matrix_list)
-            self.legend = data.get('legend', [])
+            self.legend = data.get("legend", [])
             print(f"Матрица успешно загружена из {filepath}")
         except Exception as e:
             print(f"Ошибка при загрузке матрицы: {e}")
@@ -313,7 +333,7 @@ class MatrixClusterer(Clusterer):
                 total_clusters=0,
                 unrecognized_count=0,
                 clusters=[],
-                unrecognized_images=[]
+                unrecognized_images=[],
             )
 
         # Создаем и заполняем матрицу
@@ -326,7 +346,9 @@ class MatrixClusterer(Clusterer):
 
     # В существующий класс CompareMatrix добавляем методы:
 
-    def fill_deepface(self, comparator: DeepFaceFaceComparator, image_paths: List[str]) -> None:
+    def fill_deepface(
+        self, comparator: DeepFaceFaceComparator, image_paths: List[str]
+    ) -> None:
         """
         Заполняет матрицу схожести на основе DeepFace компаратора
         Args:

@@ -5,6 +5,7 @@ from typing import List, Tuple, Optional
 @dataclass
 class BoundingBox:
     """Границы обнаруженного лица"""
+
     x1: float
     y1: float
     x2: float
@@ -34,6 +35,7 @@ class BoundingBox:
 @dataclass
 class Landmarks:
     """Ключевые точки лица"""
+
     left_eye: Tuple[float, float]
     right_eye: Tuple[float, float]
     nose: Tuple[float, float]
@@ -43,6 +45,7 @@ class Landmarks:
     def get_eye_distance(self) -> float:
         """Вычисляет расстояние между глазами"""
         from math import sqrt
+
         x1, y1 = self.left_eye
         x2, y2 = self.right_eye
         return sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -54,29 +57,30 @@ class Landmarks:
             self.right_eye,
             self.nose,
             self.mouth_left,
-            self.mouth_right
+            self.mouth_right,
         ]
 
 
 @dataclass
 class Image:
     """Доменная модель изображения"""
+
     path: str
     width: int
     height: int
     format: Optional[str] = None
-    faces: List['Face'] = field(default_factory=list)
+    faces: List["Face"] = field(default_factory=list)
 
     @property
     def aspect_ratio(self) -> float:
         """Вычисляет соотношение сторон изображения"""
         return self.width / self.height if self.height > 0 else 0
 
-    def add_face(self, face: 'Face') -> None:
+    def add_face(self, face: "Face") -> None:
         """Добавляет лицо в список обнаруженных на изображении"""
         self.faces.append(face)
 
-    def get_largest_face(self) -> Optional['Face']:
+    def get_largest_face(self) -> Optional["Face"]:
         """Возвращает самое большое лицо на изображении"""
         if not self.faces:
             return None
@@ -86,6 +90,7 @@ class Image:
 @dataclass
 class Face:
     """Доменная модель лица"""
+
     bounding_box: BoundingBox
     landmarks: Landmarks
     embedding: List[float]
@@ -101,9 +106,11 @@ class Face:
     @property
     def face_id(self) -> str:
         """Генерирует уникальный идентификатор лица"""
-        return f"{self.image.path}#{self.bounding_box.x1:.0f},{self.bounding_box.y1:.0f}"
+        return (
+            f"{self.image.path}#{self.bounding_box.x1:.0f},{self.bounding_box.y1:.0f}"
+        )
 
-    def distance_to(self, other: 'Face') -> float:
+    def distance_to(self, other: "Face") -> float:
         """Вычисляет расстояние между эмбеддингами двух лиц"""
         if len(self.embedding) != len(other.embedding):
             raise ValueError("Эмбеддинги имеют разную длину")
@@ -111,7 +118,7 @@ class Face:
         # Евклидово расстояние
         return sum((a - b) ** 2 for a, b in zip(self.embedding, other.embedding)) ** 0.5
 
-    def is_similar_to(self, other: 'Face', threshold: float = 0.6) -> bool:
+    def is_similar_to(self, other: "Face", threshold: float = 0.6) -> bool:
         """Проверяет, похожи ли два лица"""
         return self.distance_to(other) < threshold
 
@@ -119,10 +126,7 @@ class Face:
         """Вычисляет центр между глазами"""
         left_eye = self.landmarks.left_eye
         right_eye = self.landmarks.right_eye
-        return (
-            (left_eye[0] + right_eye[0]) / 2,
-            (left_eye[1] + right_eye[1]) / 2
-        )
+        return ((left_eye[0] + right_eye[0]) / 2, (left_eye[1] + right_eye[1]) / 2)
 
     def get_face_size_ratio(self) -> float:
         """Возвращает отношение размера лица к размеру изображения"""

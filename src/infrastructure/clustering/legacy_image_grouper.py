@@ -14,7 +14,9 @@ class ImageGrouper(Clusterer):
         self.image_paths = image_paths
         self.num_images = len(image_paths)
         self.groups = []
-        self.used_indices = set()  # Отслеживаем, какие изображения уже добавлены в группы
+        self.used_indices = (
+            set()
+        )  # Отслеживаем, какие изображения уже добавлены в группы
 
     def calculate_average_distance(self, group_indices):
         """Вычисляет среднее расстояние для каждого изображения в группе."""
@@ -30,7 +32,9 @@ class ImageGrouper(Clusterer):
             if count > 0:
                 average_distance = total_distance / count
             else:
-                average_distance = float('inf')  # Или 0, если считать, что одиночка близка к себе?
+                average_distance = float(
+                    "inf"
+                )  # Или 0, если считать, что одиночка близка к себе?
             distances.append((average_distance, i))
         return distances
 
@@ -72,7 +76,9 @@ class ImageGrouper(Clusterer):
         # --- Подготовка данных для возврата (с сортировкой) ---
         # Сначала сортируем сами группы по размеру (количество элементов), от большей к меньшей
         # self.groups - это список списков индексов
-        self.groups.sort(key=len, reverse=True)  # Сортировка по длине (размеру группы) по убыванию
+        self.groups.sort(
+            key=len, reverse=True
+        )  # Сортировка по длине (размеру группы) по убыванию
 
         final_groups_data = []
         # Теперь итерируемся по отсортированному списку групп
@@ -87,7 +93,9 @@ class ImageGrouper(Clusterer):
                 min_avg_distance_index = group_indices[0]
             representative_image_path = self.image_paths[min_avg_distance_index]
             # Подготавливаем данные для JSON
-            group_filenames = [os.path.basename(self.image_paths[idx]) for idx in group_indices]
+            group_filenames = [
+                os.path.basename(self.image_paths[idx]) for idx in group_indices
+            ]
             group_full_paths = [self.image_paths[idx] for idx in group_indices]
             representative_filename = os.path.basename(representative_image_path)
             group_data = Cluster(
@@ -97,7 +105,9 @@ class ImageGrouper(Clusterer):
                 representative_path=representative_image_path,
                 members=group_filenames,
                 members_paths=group_full_paths,
-                average_similarity=1.0 - min(distances, key=lambda x: x[0])[0] if distances else 0.0
+                average_similarity=(
+                    1.0 - min(distances, key=lambda x: x[0])[0] if distances else 0.0
+                ),
             )
             final_groups_data.append(group_data)
 
@@ -142,15 +152,12 @@ class ImageGrouper(Clusterer):
         for idx in unrecognized_indices:
             full_path = self.image_paths[idx]
             filename = os.path.basename(full_path)
-            unrecognized_images.append({
-                "filename": filename,
-                "full_path": full_path
-            })
+            unrecognized_images.append({"filename": filename, "full_path": full_path})
 
         return ClusteringResult(
             timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
             total_clusters=len(groups_data),
             unrecognized_count=len(unrecognized_images),
             clusters=groups_data,
-            unrecognized_images=unrecognized_images
+            unrecognized_images=unrecognized_images,
         )

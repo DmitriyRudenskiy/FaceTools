@@ -1,6 +1,10 @@
-
-from src.application.services.face_detection_service import FaceDetectionService # <<<--- НОВОЕ ИМЯ ФАЙЛА
-from src.infrastructure.detection.yolo_detector import YOLOFaceDetector, DefaultBoundingBoxProcessor
+from src.application.services.face_detection_service import (
+    FaceDetectionService,
+)  # <<<--- НОВОЕ ИМЯ ФАЙЛА
+from src.infrastructure.detection.yolo_detector import (
+    YOLOFaceDetector,
+    DefaultBoundingBoxProcessor,
+)
 from src.infrastructure.image.os_image_loader import OSImageLoader
 from src.infrastructure.persistence.file_system_organizer import FileSystemOrganizer
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
@@ -8,17 +12,23 @@ from src.infrastructure.clustering.reference_table_printer import ReferenceTable
 from src.infrastructure.persistence.group_organizer import GroupOrganizer
 from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
 
+
 class DependencyInjector:
     """Контейнер зависимостей для всего приложения"""
-    def get_face_clustering_service(self) -> FaceDetectionService: # <<<--- Тип возвращаемого значения остался прежним, так как класс переименован
+
+    def get_face_clustering_service(
+        self,
+    ) -> (
+        FaceDetectionService
+    ):  # <<<--- Тип возвращаемого значения остался прежним, так как класс переименован
         """Создает и возвращает сервис извлечения лиц"""
         file_organizer = FileSystemOrganizer()
-        return FaceDetectionService( # <<<--- Имя класса
+        return FaceDetectionService(  # <<<--- Имя класса
             file_organizer=file_organizer,
             face_detector=YOLOFaceDetector(),
             bbox_processor=DefaultBoundingBoxProcessor(),
             image_loader=OSImageLoader(),
-            result_saver=file_organizer
+            result_saver=file_organizer,
         )
 
     def get_image_grouper(self, similarity_matrix, image_paths):
@@ -36,5 +46,8 @@ class DependencyInjector:
     # В класс DependencyInjector добавляем новый метод:
     def get_deepface_face_comparator(self) -> DeepFaceFaceComparator:
         """Создает и возвращает компаратор на основе DeepFace"""
-        from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
+        from src.infrastructure.comparison.deepface_comparator import (
+            DeepFaceFaceComparator,
+        )
+
         return DeepFaceFaceComparator()

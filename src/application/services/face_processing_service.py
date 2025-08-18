@@ -10,7 +10,7 @@ class FaceProcessingService:
         file_organizer: FileOrganizer,
         face_detector: FaceDetector,
         image_loader: ImageLoader,
-        result_saver: ResultSaver
+        result_saver: ResultSaver,
     ):
         self.image_loader = image_loader
         self.face_detector = face_detector

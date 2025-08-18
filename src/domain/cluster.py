@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import List, Dict, Any
 
+
 @dataclass
 class Cluster:
     """Группа похожих лиц"""
+
     id: int
     size: int
     representative: str
@@ -12,9 +14,11 @@ class Cluster:
     members_paths: List[str]
     average_similarity: float
 
+
 @dataclass
 class ClusteringResult:
     """Результат кластеризации"""
+
     timestamp: str
     total_clusters: int
     unrecognized_count: int

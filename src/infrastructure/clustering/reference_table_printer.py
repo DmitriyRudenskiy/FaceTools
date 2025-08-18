@@ -23,7 +23,7 @@ class ReferenceTablePrinter:
 
         for i in range(self.num_images):
             filename = os.path.basename(self.image_paths[i])
-            if filename.startswith('refer_'):
+            if filename.startswith("refer_"):
                 self.refer_indices.append(i)
                 self.refer_names.append(filename)
             else:
@@ -61,25 +61,45 @@ class ReferenceTablePrinter:
             row_data.append(row_sum)
 
             # Добавляем имя файла строки и данные строки в таблицу
-            table_data.append((self.non_refer_names[self.non_refer_indices.index(non_refer_idx)], row_data))
+            table_data.append(
+                (
+                    self.non_refer_names[self.non_refer_indices.index(non_refer_idx)],
+                    row_data,
+                )
+            )
 
         # --- Сортировка по колонке 'Сумма' (по убыванию) ---
         # Индекс колонки 'Сумма' - это последний элемент в row_data
-        table_data.sort(key=lambda x: x[1][-1], reverse=True)  # reverse=True для сортировки по убыванию
+        table_data.sort(
+            key=lambda x: x[1][-1], reverse=True
+        )  # reverse=True для сортировки по убыванию
 
         # --- Вывод таблицы ---
-        print("\nТаблица сопоставления с эталонами (отсортирована по сумме расстояний):")
+        print(
+            "\nТаблица сопоставления с эталонами (отсортирована по сумме расстояний):"
+        )
 
         # Заголовок таблицы
         # Ширина столбца имени файла
-        name_col_width = max(15, max(len(name) for name in self.non_refer_names + self.refer_names + ["Сумма"])) + 2
+        name_col_width = (
+            max(
+                15,
+                max(
+                    len(name)
+                    for name in self.non_refer_names + self.refer_names + ["Сумма"]
+                ),
+            )
+            + 2
+        )
         # Ширина столбцов значений
         value_col_width = 10
 
         # Формируем строку заголовков
         header_parts = [f"{'Файл':<{name_col_width}}"]
         for refer_name in self.refer_names:
-            header_parts.append(f"{refer_name[:value_col_width - 2]:>{value_col_width}}")
+            header_parts.append(
+                f"{refer_name[:value_col_width - 2]:>{value_col_width}}"
+            )
         header_parts.append(f"{'Сумма':>{value_col_width}}")
         header_line = "".join(header_parts)
         print(header_line)
@@ -101,7 +121,11 @@ class ReferenceTablePrinter:
             # Находим минимальную сумму
             min_sum = min(row_data[-1] for _, row_data in table_data)
             # Находим все файлы с этой минимальной суммой
-            best_matches = [file_name for file_name, row_data in table_data if row_data[-1] == min_sum]
+            best_matches = [
+                file_name
+                for file_name, row_data in table_data
+                if row_data[-1] == min_sum
+            ]
 
             print("\nЛучшие совпадения (минимальная сумма расстояний до эталонов):")
             for file_name in best_matches:

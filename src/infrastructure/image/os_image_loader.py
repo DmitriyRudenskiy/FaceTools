@@ -7,10 +7,11 @@ from src.core.interfaces.image_loader import ImageLoader
 from src.domain.image_model import Image, ImageInfo
 from PIL import Image as PILImage
 
+
 class OSImageLoader(ImageLoader):
     """Реализация загрузки изображений через операционную систему."""
 
-    SUPPORTED_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
+    SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".tiff")
 
     def __init__(self, preprocessor=None):
         self.preprocessor = preprocessor
@@ -20,7 +21,9 @@ class OSImageLoader(ImageLoader):
 
     def load_images(self, directory: str) -> List[Tuple[str, np.ndarray]]:
         if not self.validate_directory(directory):
-            raise FileHandlingError(f"Директория {directory} не существует или недоступна")
+            raise FileHandlingError(
+                f"Директория {directory} не существует или недоступна"
+            )
 
         images = []
         for filename in os.listdir(directory):
@@ -37,7 +40,9 @@ class OSImageLoader(ImageLoader):
 
                         images.append((file_path, image))
                 except Exception as e:
-                    raise FileHandlingError(f"Ошибка загрузки файла {file_path}: {str(e)}")
+                    raise FileHandlingError(
+                        f"Ошибка загрузки файла {file_path}: {str(e)}"
+                    )
 
         return images
 
@@ -48,9 +53,5 @@ class OSImageLoader(ImageLoader):
 
         return Image(
             data=pil_image,
-            info=ImageInfo(
-                path=path,
-                size=pil_image.size,
-                format=pil_image.format
-            )
+            info=ImageInfo(path=path, size=pil_image.size, format=pil_image.format),
         )

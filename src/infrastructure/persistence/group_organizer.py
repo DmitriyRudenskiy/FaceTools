@@ -32,15 +32,19 @@ class GroupOrganizer:
         start_time = time.time()
         total_copied = 0
         for group_data in self.groups_data:
-            group_id = group_data['id']
+            group_id = group_data["id"]
             # Используем имя файла представителя (без расширения) как имя каталога
-            representative_name = os.path.splitext(group_data['representative'])[0]
+            representative_name = os.path.splitext(group_data["representative"])[0]
             # Очищаем имя от недопустимых символов для имен файлов/каталогов
-            safe_group_name = "".join(c for c in representative_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_group_name = "".join(
+                c for c in representative_name if c.isalnum() or c in (" ", "-", "_")
+            ).rstrip()
             # Если имя оказалось пустым, используем ID группы
             if not safe_group_name:
                 safe_group_name = f"Group_{group_id}"
-            group_directory_path = os.path.join(self.destination_directory, safe_group_name)
+            group_directory_path = os.path.join(
+                self.destination_directory, safe_group_name
+            )
             print(f"Создаю каталог для группы {group_id}: {group_directory_path}")
             # Создаем каталог для группы
             try:
@@ -51,7 +55,7 @@ class GroupOrganizer:
 
             # Копируем файлы группы в созданный каталог
             copied_count = 0
-            for full_path in group_data['images_full_paths']:
+            for full_path in group_data["images_full_paths"]:
                 try:
                     filename = os.path.basename(full_path)
                     destination_file_path = os.path.join(group_directory_path, filename)
@@ -60,7 +64,9 @@ class GroupOrganizer:
                     copied_count += 1
                     total_copied += 1
                 except Exception as e:
-                    print(f"Ошибка копирования файла {full_path} в {group_directory_path}: {e}")
+                    print(
+                        f"Ошибка копирования файла {full_path} в {group_directory_path}: {e}"
+                    )
             print(f"  Скопировано файлов в группу '{safe_group_name}': {copied_count}")
 
         end_time = time.time()

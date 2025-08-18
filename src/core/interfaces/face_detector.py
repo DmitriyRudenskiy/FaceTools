@@ -15,11 +15,15 @@ class BoundingBoxProcessor(ABC):
     """Абстракция для обработки bounding box'ов"""
 
     @abstractmethod
-    def merge_overlapping(self, boxes: List[List[float]], iou_threshold: float = 0.5) -> List[List[float]]:
+    def merge_overlapping(
+        self, boxes: List[List[float]], iou_threshold: float = 0.5
+    ) -> List[List[float]]:
         """Объединяет пересекающиеся bounding box'ы"""
         pass
 
     @abstractmethod
-    def calculate_square_crop(self, bbox: List[float], image_size: Tuple[int, int]) -> Tuple[int, int, int, int]:
+    def calculate_square_crop(
+        self, bbox: List[float], image_size: Tuple[int, int]
+    ) -> Tuple[int, int, int, int]:
         """Рассчитывает координаты квадратной обрезки с заданным процентом отступа"""
         pass

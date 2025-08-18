@@ -9,7 +9,7 @@ class FileSystemOrganizer(FileOrganizer):
 
     def get_image_files(self, path: str) -> List[str]:
         """Возвращает список путей к изображениям в указанном пути"""
-        image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp', '.gif'}
+        image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".gif"}
 
         if not os.path.exists(path):
             return []
@@ -33,7 +33,9 @@ class FileSystemOrganizer(FileOrganizer):
         for cluster in clusters:
             # Создаем имя директории на основе представителя
             representative_name = os.path.splitext(cluster["representative"])[0]
-            safe_name = "".join(c for c in representative_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_name = "".join(
+                c for c in representative_name if c.isalnum() or c in (" ", "-", "_")
+            ).rstrip()
             if not safe_name:
                 safe_name = f"Group_{cluster['id']}"
 

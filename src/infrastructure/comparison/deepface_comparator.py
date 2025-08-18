@@ -3,6 +3,7 @@ import numpy as np
 from deepface import DeepFace
 from typing import Tuple, List
 
+
 class DeepFaceFaceComparator:
     """Сравнение лиц с использованием DeepFace и ArcFace"""
 
@@ -21,7 +22,7 @@ class DeepFaceFaceComparator:
                     img_path=image_path,
                     model_name=self.model_name,
                     detector_backend=self.detector_backend,
-                    enforce_detection=True
+                    enforce_detection=True,
                 )
 
                 # Берем первый найденный эмбеддинг (первое лицо на изображении)
@@ -59,7 +60,9 @@ class DeepFaceFaceComparator:
 
         # Проверка на наличие эмбеддингов
         if emb1 is None or emb2 is None:
-            return float('inf')  # Возвращаем максимальное расстояние если одно из лиц не найдено
+            return float(
+                "inf"
+            )  # Возвращаем максимальное расстояние если одно из лиц не найдено
 
         # По умолчанию используем косинусное расстояние
         dot_product = np.dot(emb1, emb2)
@@ -80,7 +83,7 @@ class DeepFaceFaceComparator:
             "verified": is_verified,
             "distance": distance,
             "threshold": threshold,
-            "similarity": similarity
+            "similarity": similarity,
         }
 
     def batch_compare(self, image_paths: List[str]) -> list:
@@ -99,5 +102,7 @@ class DeepFaceFaceComparator:
                     distance = self._compare_by_index(i, j)
                     result = self.verify(distance)
                     similarity_matrix[i][j] = (result["verified"], distance)
-                    similarity_matrix[j][i] = similarity_matrix[i][j]  # Симметричная матрица
+                    similarity_matrix[j][i] = similarity_matrix[i][
+                        j
+                    ]  # Симметричная матрица
         return similarity_matrix
