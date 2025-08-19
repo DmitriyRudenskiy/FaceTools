@@ -1,5 +1,5 @@
-from typing import List, Any
 import os
+from typing import Any, List
 
 
 class ReferenceTablePrinter:

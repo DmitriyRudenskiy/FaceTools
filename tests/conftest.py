@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
+
 import pytest
 
 # Добавляем корневую директорию проекта в sys.path

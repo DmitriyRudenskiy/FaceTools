@@ -1,14 +1,11 @@
-from src.core.interfaces import (
-    FaceDetector,
-    BoundingBoxProcessor,
-    ImageLoader,
-    FileOrganizer,
-)
-from src.core.exceptions import FaceDetectionError, FileHandlingError
-from src.domain.image_model import Image  # Обратите внимание на имя модуля
-from src.domain.face import Face, BoundingBox
-from typing import List
 import os
+from typing import List
+
+from src.core.exceptions import FaceDetectionError, FileHandlingError
+from src.core.interfaces import (BoundingBoxProcessor, FaceDetector,
+                                 FileOrganizer, ImageLoader)
+from src.domain.face import BoundingBox, Face
+from src.domain.image_model import Image  # Обратите внимание на имя модуля
 
 
 class FaceCropService:

@@ -1,7 +1,8 @@
 # tests/unit/config/test_dependency_injector.py
-from src.config.dependency_injector import DependencyInjector
 from src.application.services.face_crop_service import FaceCropService
-from src.core.interfaces import FaceDetector, BoundingBoxProcessor, ImageLoader, FileOrganizer
+from src.config.dependency_injector import DependencyInjector
+from src.core.interfaces import (BoundingBoxProcessor, FaceDetector,
+                                 FileOrganizer, ImageLoader)
 
 
 def test_dependency_injector_creates_face_crop_service():

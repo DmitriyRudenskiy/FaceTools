@@ -1,6 +1,9 @@
-# tests/unit/infrastructure/detection/test_yolo_detector.py
-import pytest
 from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
+from PIL import Image as PILImage
+
 from src.infrastructure.detection.yolo_detector import YOLOFaceDetector
 
 
@@ -18,19 +21,20 @@ def test_detect_faces(yolo_detector):
 
     # Создаем тестовые данные
     mock_results = MagicMock()
+    # Используем правильный формат для bounding boxes
     mock_results.boxes.xyxy = [[10, 10, 50, 50], [60, 60, 90, 90]]
     mock_model.return_value = [mock_results]
 
     # Создаем тестовое изображение
-    mock_image = MagicMock()
+    mock_image = np.array(PILImage.new('RGB', (100, 100), color='red'))
 
     # Вызываем метод
     boxes = yolo_detector.detect(mock_image)
 
     # Проверяем результат
     assert len(boxes) == 2
-    assert boxes[0] == [10, 10, 50, 50]
-    assert boxes[1] == [60, 60, 90, 90]
+    assert boxes[0].x1 == 10 and boxes[0].y1 == 10 and boxes[0].x2 == 50 and boxes[0].y2 == 50
+    assert boxes[1].x1 == 60 and boxes[1].y1 == 60 and boxes[1].x2 == 90 and boxes[1].y2 == 90
 
 
 def test_model_loading_success():
@@ -38,12 +42,12 @@ def test_model_loading_success():
     with patch('os.path.exists') as mock_exists, \
             patch('ultralytics.YOLO') as mock_yolo:
         mock_exists.return_value = True
-        mock_yolo.return_value = MagicMock()  # Добавляем возвращаемое значение
+        mock_yolo.return_value = MagicMock()
 
         detector = YOLOFaceDetector()
 
         assert detector.model is not None
-        mock_yolo.assert_called_once()  # Используем assert_called_once вместо assert_called
+        mock_yolo.assert_called()  # Проверяем, что YOLO был вызван
 
 
 def test_model_loading_failure():

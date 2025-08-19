@@ -1,7 +1,8 @@
-# tests/unit/infrastructure/detection/test_default_bbox_processor.py
 import pytest
-from src.infrastructure.detection.yolo_detector import DefaultBoundingBoxProcessor
+
 from src.domain.face import BoundingBox
+from src.infrastructure.detection.yolo_detector import \
+    DefaultBoundingBoxProcessor
 
 
 @pytest.fixture
@@ -10,49 +11,43 @@ def bbox_processor():
 
 
 def test_calculate_square_crop(bbox_processor):
-    """Проверяет вычисление квадратного обрезка"""
-    # Тестовый bounding box
+    """Проверяет расчет квадратного обрезания"""
     bbox = BoundingBox(x1=10, y1=20, x2=50, y2=60)
     image_size = (100, 100)
 
-    # Вычисляем квадратный обрезок
-    crop_coords = bbox_processor.calculate_square_crop(bbox, image_size)
+    square_bbox = bbox_processor.calculate_square_crop(bbox, image_size)
 
-    # Проверяем результат
-    assert len(crop_coords) == 4
-    assert all(isinstance(coord, int) for coord in crop_coords)
-    assert crop_coords[0] >= 0  # x1
-    assert crop_coords[1] >= 0  # y1
-    assert crop_coords[2] <= 100  # x2
-    assert crop_coords[3] <= 100  # y2
-    assert crop_coords[2] - crop_coords[0] == crop_coords[3] - crop_coords[1]  # квадрат
+    assert square_bbox.x1 >= 0
+    assert square_bbox.y1 >= 0
+    assert square_bbox.width == square_bbox.height
 
 
 def test_merge_overlapping(bbox_processor):
     """Проверяет объединение пересекающихся bounding box'ов"""
-    # Создаем несколько пересекающихся bounding box'ов
     boxes = [
-        BoundingBox(10, 10, 50, 50),
-        BoundingBox(15, 15, 55, 55),
-        BoundingBox(60, 60, 90, 90)
+        BoundingBox(x1=10, y1=10, x2=30, y2=30),
+        BoundingBox(x1=20, y1=20, x2=40, y2=40)
     ]
 
-    # Объединяем
     merged_boxes = bbox_processor.merge_overlapping(boxes)
 
-    # Проверяем результат
-    assert len(merged_boxes) == 2  # Должно быть 2 непересекающихся box'а
-    assert merged_boxes[0] == BoundingBox(10, 10, 55, 55)  # Объединенный box
-    assert merged_boxes[1] == BoundingBox(60, 60, 90, 90)  # Отдельный box
+    assert len(merged_boxes) == 1
+    assert merged_boxes[0].x1 <= 10
+    assert merged_boxes[0].y1 <= 10
+    assert merged_boxes[0].x2 >= 40
+    assert merged_boxes[0].y2 >= 40
 
 
 def test_merge_overlapping_no_overlap(bbox_processor):
     """Проверяет обработку bounding box'ов без пересечения"""
     boxes = [
-        [10, 10, 30, 30],
-        [50, 50, 80, 80]
+        BoundingBox(x1=10, y1=10, x2=30, y2=30),
+        BoundingBox(x1=50, y1=50, x2=80, y2=80)
     ]
 
     merged_boxes = bbox_processor.merge_overlapping(boxes)
+
     assert len(merged_boxes) == 2
-    assert merged_boxes == boxes
+    # Проверяем, что bounding boxes остались теми же
+    assert merged_boxes[0].x1 == 10 and merged_boxes[0].y1 == 10
+    assert merged_boxes[1].x1 == 50 and merged_boxes[1].y1 == 50

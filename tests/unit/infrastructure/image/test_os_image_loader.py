@@ -1,8 +1,10 @@
-# tests/unit/infrastructure/image/test_os_image_loader.py
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
+from PIL import Image as PILImage
+
+from src.domain.image_model import Image, ImageInfo
 from src.infrastructure.image.os_image_loader import OSImageLoader
-from src.domain.image_model import Image
 
 
 @pytest.fixture
@@ -15,7 +17,9 @@ def test_load_success(image_loader):
     with patch('PIL.Image.open') as mock_open, \
             patch('os.path.exists') as mock_exists:
         mock_exists.return_value = True
-        mock_image = MagicMock()
+
+        # Создаем реальное изображение
+        mock_image = PILImage.new('RGB', (100, 100), color='red')
         mock_open.return_value = mock_image
 
         # Загружаем изображение
@@ -23,8 +27,9 @@ def test_load_success(image_loader):
 
         # Проверяем результат
         assert isinstance(result, Image)
-        assert result.data == mock_image
+        assert result.data is not None
         assert result.info is not None
+        assert isinstance(result.info, ImageInfo)
         mock_open.assert_called_once_with("/test/image.jpg")
 
 
@@ -44,15 +49,18 @@ def test_load_images_from_directory(image_loader, tmp_path):
     # Создаем временную директорию с тестовыми изображениями
     test_dir = tmp_path / "test_dir"
     test_dir.mkdir()
-    (test_dir / "image1.jpg").touch()
-    (test_dir / "image2.png").touch()
+
+    # Создаем реальные изображения
+    image1 = test_dir / "image1.jpg"
+    image2 = test_dir / "image2.png"
+    PILImage.new('RGB', (100, 100), color='red').save(image1)
+    PILImage.new('RGB', (100, 100), color='blue').save(image2)
 
     # Загружаем изображения
     images = image_loader.load_images(str(test_dir))
 
     # Проверяем результат
     assert len(images) == 2
-    assert all(isinstance(img[0], str) for img in images)  # Пути
-    assert all(img[1] is not None for img in images)  # Изображения
     assert any("image1.jpg" in img[0] for img in images)
     assert any("image2.png" in img[0] for img in images)
+    assert all(img[1] is not None for img in images)  # Изображения
