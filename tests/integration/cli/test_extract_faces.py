@@ -1,8 +1,6 @@
 # tests/integration/cli/test_extract_faces.py
-import os
 import sys
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 def create_test_cli_script(tmp_path):

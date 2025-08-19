@@ -1,7 +1,6 @@
 # tests/unit/application/services/test_face_crop_service.py
-import os
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from src.application.services.face_crop_service import FaceCropService
 from src.domain.face import Face, BoundingBox
 from src.domain.image_model import Image

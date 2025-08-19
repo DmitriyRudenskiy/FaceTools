@@ -1,5 +1,4 @@
 # tests/unit/domain/test_bounding_box.py
-import pytest
 from src.domain.face import BoundingBox
 
 

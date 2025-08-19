@@ -1,18 +1,23 @@
-from src.core.interfaces import FaceDetector, BoundingBoxProcessor, ImageLoader, FileOrganizer, ResultSaver
+from src.core.interfaces import (
+    FaceDetector,
+    BoundingBoxProcessor,
+    ImageLoader,
+    FileOrganizer,
+)
 from src.core.exceptions import FaceDetectionError, FileHandlingError
 from src.domain.image_model import Image  # Обратите внимание на имя модуля
 from src.domain.face import Face, BoundingBox
-from typing import List, Tuple
+from typing import List
 import os
 
 
 class FaceCropService:
     def __init__(
-            self,
-            file_organizer: FileOrganizer,
-            face_detector: FaceDetector,
-            bbox_processor: BoundingBoxProcessor,
-            image_loader: ImageLoader,
+        self,
+        file_organizer: FileOrganizer,
+        face_detector: FaceDetector,
+        bbox_processor: BoundingBoxProcessor,
+        image_loader: ImageLoader,
     ):
         self.file_organizer = file_organizer
         self.face_detector = face_detector
@@ -31,8 +36,11 @@ class FaceCropService:
 
         # Определяем выходную директорию
         if output_dir is None:
-            output_dir = input_path if self.file_organizer.is_directory(input_path) \
+            output_dir = (
+                input_path
+                if self.file_organizer.is_directory(input_path)
                 else self.file_organizer.get_directory(input_path)
+            )
 
         try:
             self.file_organizer.create_directory(output_dir)
@@ -66,15 +74,17 @@ class FaceCropService:
                 # Сохраняем результаты для последующего вывода таблицы
                 self.processing_results.append((filename, saved_files))
                 success_count += 1
-            except FaceDetectionError as e:
+            except FaceDetectionError:
                 continue
-            except Exception as e:
+            except Exception:
                 continue
 
         # Выводим результаты в виде таблицы
         self._print_results_table()
 
-        print(f"\nОбработка завершена! Обработано: {success_count}/{total_count} изображений")
+        print(
+            f"\nОбработка завершена! Обработано: {success_count}/{total_count} изображений"
+        )
         return success_count > 0
 
     def _print_results_table(self):
@@ -83,8 +93,13 @@ class FaceCropService:
             return
 
         # Определяем ширину колонок
-        max_input_len = max(len("Обработка"), max(len(item[0]) for item in self.processing_results))
-        max_output_len = max(len("Сохранено"), max(len(", ".join(item[1])) for item in self.processing_results))
+        max_input_len = max(
+            len("Обработка"), max(len(item[0]) for item in self.processing_results)
+        )
+        max_output_len = max(
+            len("Сохранено"),
+            max(len(", ".join(item[1])) for item in self.processing_results),
+        )
 
         # Выводим заголовок таблицы
         print("\n" + "=" * (max_input_len + max_output_len + 7))
@@ -94,7 +109,9 @@ class FaceCropService:
         # Выводим строки таблицы
         for filename, saved_files in self.processing_results:
             saved_files_str = ", ".join(saved_files) if saved_files else ""
-            print(f"| {filename:<{max_input_len}} | {saved_files_str:<{max_output_len}} |")
+            print(
+                f"| {filename:<{max_input_len}} | {saved_files_str:<{max_output_len}} |"
+            )
 
         print("=" * (max_input_len + max_output_len + 7))
 
@@ -107,12 +124,9 @@ class FaceCropService:
             # Создаем объекты Face из bounding boxes
             faces = []
             for box in merged_boxes:
-                faces.append(Face(
-                    bounding_box=box,
-                    landmarks=None,
-                    embedding=[],
-                    image=image
-                ))
+                faces.append(
+                    Face(bounding_box=box, landmarks=None, embedding=[], image=image)
+                )
             return faces
         except Exception as e:
             raise FaceDetectionError(f"Ошибка детекции лиц: {str(e)}") from e
@@ -121,14 +135,15 @@ class FaceCropService:
         """Обрезка лица по bounding box"""
         try:
             crop_coords = self.bbox_processor.calculate_square_crop(
-                bbox,
-                (image.info.size[0], image.info.size[1])
+                bbox, (image.info.size[0], image.info.size[1])
             )
             return image.data.crop(crop_coords)
         except Exception as e:
             raise FaceDetectionError(f"Ошибка обрезки лица: {str(e)}") from e
 
-    def _generate_output_path(self, source_path: str, face_index: int, output_dir: str) -> str:
+    def _generate_output_path(
+        self, source_path: str, face_index: int, output_dir: str
+    ) -> str:
         """Генерация пути для сохранения лица с именем вида original_face_N.jpg"""
         base_name = self.file_organizer.get_basename(source_path)
         return os.path.join(output_dir, f"{base_name}_face_{face_index + 1}.jpg")

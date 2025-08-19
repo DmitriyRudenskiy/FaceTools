@@ -19,9 +19,7 @@ class DependencyInjector:
 
     def get_face_detection_service(
         self,
-    ) -> (
-        FaceDetectionService
-    ):
+    ) -> FaceDetectionService:
         """Создает и возвращает сервис извлечения лиц"""
         file_organizer = FileSystemOrganizer()
         return FaceDetectionService(  # <<<--- Имя класса
@@ -53,20 +51,22 @@ class DependencyInjector:
 
         return DeepFaceFaceComparator()
 
-    def get_face_crop_service(self): # Или другой метод, где происходит ошибка
+    def get_face_crop_service(self):  # Или другой метод, где происходит ошибка
         """Создает и возвращает сервис вырезания лиц"""
         # Убедитесь, что здесь используются правильные классы и импорты
-        file_organizer = FileSystemOrganizer() # Убедитесь, что это импортировано
-        face_detector = YOLOFaceDetector() # Убедитесь, что это импортировано
-        bbox_processor = DefaultBoundingBoxProcessor() # Убедитесь, что это импортировано
-        image_loader = OSImageLoader() # Убедитесь, что это импортировано
+        file_organizer = FileSystemOrganizer()  # Убедитесь, что это импортировано
+        face_detector = YOLOFaceDetector()  # Убедитесь, что это импортировано
+        bbox_processor = (
+            DefaultBoundingBoxProcessor()
+        )  # Убедитесь, что это импортировано
+        image_loader = OSImageLoader()  # Убедитесь, что это импортировано
         file_organizer = FileSystemOrganizer()
 
         return FaceCropService(
             file_organizer=file_organizer,
             face_detector=face_detector,
             bbox_processor=bbox_processor,
-            image_loader=image_loader
+            image_loader=image_loader,
         )
 
     def get_face_crop_service(self):
@@ -82,5 +82,5 @@ class DependencyInjector:
             file_organizer=file_organizer,
             face_detector=face_detector,
             bbox_processor=bbox_processor,
-            image_loader=image_loader
+            image_loader=image_loader,
         )

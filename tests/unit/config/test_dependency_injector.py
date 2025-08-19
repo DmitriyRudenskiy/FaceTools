@@ -1,5 +1,4 @@
 # tests/unit/config/test_dependency_injector.py
-import pytest
 from src.config.dependency_injector import DependencyInjector
 from src.application.services.face_crop_service import FaceCropService
 from src.core.interfaces import FaceDetector, BoundingBoxProcessor, ImageLoader, FileOrganizer

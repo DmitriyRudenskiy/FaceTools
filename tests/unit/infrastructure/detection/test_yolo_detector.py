@@ -2,7 +2,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from src.infrastructure.detection.yolo_detector import YOLOFaceDetector
-from src.domain.face import BoundingBox
 
 
 @pytest.fixture

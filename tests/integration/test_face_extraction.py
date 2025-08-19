@@ -4,9 +4,7 @@ from unittest.mock import MagicMock, patch
 import tempfile
 import shutil
 import pytest
-from unittest.mock import patch
 from src.config.dependency_injector import DependencyInjector
-from src.application.services.face_crop_service import FaceCropService
 from src.domain.face import BoundingBox
 
 

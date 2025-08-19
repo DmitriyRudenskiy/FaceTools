@@ -1,5 +1,4 @@
 # tests/unit/domain/test_face.py
-import pytest
 from src.domain.face import Face, BoundingBox
 from src.domain.image_model import Image, ImageInfo
 
