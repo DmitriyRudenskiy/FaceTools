@@ -2,9 +2,9 @@
 import time
 from typing import Any, Dict, List, Optional
 
-from src.application.services import (FaceClusteringService,
-                                      FaceProcessingService)
+from src.application.services import FaceClusteringService, FaceProcessingService
 from src.core.interfaces import FileOrganizer, ResultSaver
+
 # Используем абсолютные импорты, как в остальной части проекта
 from src.domain.cluster import ClusteringResult
 

@@ -2,8 +2,12 @@ import os
 from typing import List
 
 from src.core.exceptions import FaceDetectionError, FileHandlingError
-from src.core.interfaces import (BoundingBoxProcessor, FaceDetector,
-                                 FileOrganizer, ImageLoader)
+from src.core.interfaces import (
+    BoundingBoxProcessor,
+    FaceDetector,
+    FileOrganizer,
+    ImageLoader,
+)
 from src.domain.face import BoundingBox, Face
 from src.domain.image_model import Image  # Обратите внимание на имя модуля
 

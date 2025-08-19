@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""CLI-скрипт для извлечения лиц из изображений в указанной директории.
-Сохраняет обрезанные лица в подкаталог 'faces' внутри исходной директории."""
-
 import os
 import sys
 from pathlib import Path
@@ -125,5 +120,17 @@ def main():
     return 0 if success else 1
 
 if __name__ == "__main__":
-    # Запускаем основную функцию и выходим с соответствующим кодом
-    sys.exit(main())
+    # Add project root to sys.path
+    current_file = Path(__file__).resolve()
+    current_dir = current_file.parent
+    root_dir = current_dir
+    while True:
+        if (root_dir / "src").exists() and (root_dir / "cli").exists():
+            break
+        parent_dir = root_dir.parent
+        if parent_dir == root_dir:
+            raise RuntimeError("Project root not found")
+        root_dir = parent_dir
+    if str(root_dir) not in sys.path:
+        sys.path.insert(0, str(root_dir))
+    # Rest of the script

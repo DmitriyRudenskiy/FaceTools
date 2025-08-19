@@ -1,4 +1,3 @@
-# src/infrastructure/clustering/legacy_image_grouper.py
 import os
 import time
 from typing import List

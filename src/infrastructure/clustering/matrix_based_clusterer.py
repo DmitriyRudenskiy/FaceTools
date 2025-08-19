@@ -1,8 +1,3 @@
-"""
-Модуль для кластеризации лиц на основе матрицы сравнения.
-Содержит реализацию CompareMatrix - инструмента для работы с матрицей схожести лиц.
-"""
-
 import json
 import os
 from typing import Any, List, Optional
@@ -12,8 +7,7 @@ import numpy as np
 from src.core.interfaces.clusterer import Clusterer
 from src.core.interfaces.face_comparator import FaceComparator
 from src.domain.cluster import Cluster, ClusteringResult
-from src.infrastructure.comparison.deepface_comparator import \
-    DeepFaceFaceComparator
+from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
 
 
 # Просто пример для демонстрации
@@ -24,10 +18,6 @@ class MockComparator:
     def compare(self, i, j):
         # В реальности это может быть расстояние между изображениями i и j
         return np.random.uniform(0, 1)
-
-
-# Предполагаемые импорты для исключений, если они используются
-# from src.core.exceptions.clustering_error import ClusteringError
 
 
 class CompareMatrix:

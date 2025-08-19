@@ -105,10 +105,7 @@ class Face:
 
     @property
     def face_id(self) -> str:
-        """Генерирует уникальный идентификатор лица"""
-        return (
-            f"{self.image.path}#{self.bounding_box.x1:.0f},{self.bounding_box.y1:.0f}"
-        )
+        return f"{self.image.info.path}#{self.bounding_box.x1:.0f},{self.bounding_box.y1:.0f}"
 
     def distance_to(self, other: "Face") -> float:
         """Вычисляет расстояние между эмбеддингами двух лиц"""

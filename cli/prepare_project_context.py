@@ -1,8 +1,7 @@
+import datetime
 import os
 import sys
 import zlib
-import datetime
-import platform
 
 # Константы для фильтров
 ALLOWED_EXTENSIONS = {'.py', '.yaml'}
@@ -130,7 +129,7 @@ def generate_project_context(project_dir, output_file='project_context.txt'):
     # Открываем выходной файл для записи
     with open(output_file, 'w', encoding='utf-8') as out_f:
         # Записываем мета-информацию
-        out_f.write(f"=== Мета-информация ===\n")
+        out_f.write("=== Мета-информация ===\n")
         out_f.write(f"Дата генерации: {generation_date}\n")
         out_f.write(f"Версия Python: {python_version}\n")
         out_f.write(f"Хеш-сумма проекта (CRC32): {project_hash:08X}\n")
@@ -190,4 +189,4 @@ if __name__ == "__main__":
 
     print(f"Обработка директории проекта: {project_dir}")
     generate_project_context(project_dir)
-    print(f"Контекст проекта успешно сгенерирован в файл project_context.txt")
+    print("Контекст проекта успешно сгенерирован в файл project_context.txt")
