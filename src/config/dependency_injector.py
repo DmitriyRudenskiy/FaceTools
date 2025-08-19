@@ -68,3 +68,19 @@ class DependencyInjector:
             bbox_processor=bbox_processor,
             image_loader=image_loader
         )
+
+    def get_face_crop_service(self):
+        """Создает и возвращает сервис вырезания лиц"""
+        # Создаем зависимости
+        file_organizer = FileSystemOrganizer()
+        face_detector = YOLOFaceDetector()
+        bbox_processor = DefaultBoundingBoxProcessor()
+        image_loader = OSImageLoader()
+
+        # Возвращаем экземпляр сервиса
+        return FaceCropService(
+            file_organizer=file_organizer,
+            face_detector=face_detector,
+            bbox_processor=bbox_processor,
+            image_loader=image_loader
+        )

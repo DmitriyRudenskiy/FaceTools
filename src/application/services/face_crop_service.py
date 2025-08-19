@@ -1,6 +1,6 @@
 from src.core.interfaces import FaceDetector, BoundingBoxProcessor, ImageLoader, FileOrganizer, ResultSaver
 from src.core.exceptions import FaceDetectionError, FileHandlingError
-from src.domain.image_model import Image
+from src.domain.image_model import Image  # Обратите внимание на имя модуля
 from src.domain.face import Face, BoundingBox
 from typing import List, Tuple
 import os
