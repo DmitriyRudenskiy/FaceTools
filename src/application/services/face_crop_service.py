@@ -1,7 +1,7 @@
-from core.interfaces import FaceDetector, BoundingBoxProcessor, ImageLoader, FileOrganizer, ResultSaver
-from core.exceptions import FaceDetectionError, FileHandlingError
-from domain.image import Image
-from domain.face import Face, BoundingBox
+from src.core.interfaces import FaceDetector, BoundingBoxProcessor, ImageLoader, FileOrganizer, ResultSaver
+from src.core.exceptions import FaceDetectionError, FileHandlingError
+from src.domain.image_model import Image
+from src.domain.face import Face, BoundingBox
 from typing import List, Tuple
 import os
 

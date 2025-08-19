@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-CLI-скрипт для извлечения лиц из изображений в указанной директории.
-Сохраняет обрезанные лица в подкаталог 'faces' внутри исходной директории.
-"""
+"""CLI-скрипт для извлечения лиц из изображений в указанной директории.
+Сохраняет обрезанные лица в подкаталог 'faces' внутри исходной директории."""
 
 import os
 import sys
@@ -39,13 +37,16 @@ if project_root is None:
 project_root_str = str(project_root)
 if project_root_str not in sys.path:
     sys.path.insert(0, project_root_str)
-
-print(f"Корневая директория проекта определена как: {project_root}")
+    print(f"Корневая директория проекта определена как: {project_root}")
+else:
+    print(f"[DEBUG] Корневая директория уже в sys.path: {project_root}")
 
 # --- Импорты после настройки пути ---
 # Теперь можно безопасно импортировать модули проекта
 try:
+    # Импортируем контейнер зависимостей
     from src.config.dependency_injector import DependencyInjector
+
 except ImportError as e:
     print(f"Ошибка импорта: {e}")
     print("Возможные причины:")
@@ -54,11 +55,8 @@ except ImportError as e:
     print("3. Структура проекта не соответствует ожидаемой")
     sys.exit(1)
 
-
 def main():
-    """
-    Основная функция скрипта.
-    """
+    """Основная функция скрипта."""
     print("=== Скрипт извлечения лиц (extract_faces.py) ===")
 
     # Проверка аргументов командной строки
@@ -69,53 +67,45 @@ def main():
 
     # Получаем пути из аргументов
     input_path = sys.argv[1]
-    # Путь к файлу результатов - второй аргумент или None (сервис должен обработать)
-    # Если нужно указать файл, можно сделать так:
-    # output_file = sys.argv[2] if len(sys.argv) > 2 else "faces.json"
-    # Но для extract_faces.py, как правило, это не нужно, поэтому передаем None
-    # и ожидаем, что сервис корректно обработает этот случай.
+    # Путь к файлу результатов - второй аргумент или None
     output_file = sys.argv[2] if len(sys.argv) > 2 else None # Или "faces.json" если хотите файл по умолчанию
 
     print(f"Входная директория: {input_path}")
     if output_file:
         print(f"Файл результатов: {output_file}")
     else:
-        print("Файл результатов не будет создан (или будет создан с именем по умолчанию внутри сервиса).")
+         print("Файл результатов не будет создан.")
 
-    # Проверка существования входной директории
-    if not os.path.exists(input_path):
-        print(f"Ошибка: Указанный путь не существует: {input_path}")
-        return 1
-
-    if not os.path.isdir(input_path):
-        print(f"Ошибка: '{input_path}' не является директорией")
-        return 1
-
+    # --- Использование Dependency Injection ---
     try:
         # Создаем инжектор зависимостей
         injector = DependencyInjector()
 
-        # Получаем сервис для извлечения лиц
-        # Предполагается, что этот сервис реализует process(input_path, output_file=None, dest_dir=None, ...)
+        # Получаем сервис для обрезки лиц (используя правильный метод)
+        # Проверьте, какой метод возвращает нужный сервис в вашем DependencyInjector
         service = injector.get_face_crop_service() # Или get_face_processing_service, в зависимости от реализации
 
-        # --- Исправление ---
-        # Передаем output_file в метод process.
-        # Если output_file == None, сервис должен корректно обработать этот случай
-        # (например, не вызывать save или использовать путь по умолчанию внутри).
-        # Также передаем dest_dir для организации файлов.
+    except Exception as e:
+        print(f"[ERROR] Ошибка инициализации сервиса: {str(e)}")
+        # Вывод трассировки стека для отладки (опционально)
+        import traceback
+        print(traceback.format_exc())
+        return 1
+
+    # --- Обработка изображений ---
+    try:
+        # Определяем директорию для сохранения лиц
         dest_dir = os.path.join(input_path, "faces")
         print(f"Лица будут сохранены в: {dest_dir}")
 
         # Вызываем метод обработки изображений
-        # Предполагаем, что метод process принимает output_file как аргумент
-        # и корректно обрабатывает его значение None.
-        success = service.process(
+        # Убедитесь, что сигнатура метода process соответствует ожиданиям
+        # Предполагаем, что метод process принимает необходимые аргументы
+        # и корректно обрабатывает их значения (например, None).
+        # Вызываем правильный метод с правильными аргументами
+        success = service.process_images(
             input_path=input_path,
-            output_file=output_file, # Передаем путь к файлу результатов (может быть None)
-            dest_dir=dest_dir,       # Куда копировать обрезанные лица
-            show_matrix=False,
-            show_reference_table=False,
+            output_dir=dest_dir  # метод process_images принимает output_dir, не dest_dir
         )
 
         if success:
@@ -131,7 +121,6 @@ def main():
         import traceback
         print(traceback.format_exc())
         return 1 # Ошибка
-
 
 if __name__ == "__main__":
     # Запускаем основную функцию и выходим с соответствующим кодом
