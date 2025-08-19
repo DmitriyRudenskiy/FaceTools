@@ -1,14 +1,19 @@
-from typing import Any
+from dataclasses import dataclass
+from typing import Tuple
 
 
+@dataclass
 class ImageInfo:
-    def __init__(self, width: int, height: int, format: str):
-        self.width = width
-        self.height = height
-        self.format = format
+    """Метаданные изображения"""
+
+    path: str
+    size: Tuple[int, int]  # (width, height)
+    format: str
 
 
+@dataclass
 class Image:
-    def __init__(self, data: Any, info: ImageInfo):
-        self.data = data
-        self.info = info
+    """Доменная модель изображения"""
+
+    data: any  # PIL.Image или numpy array
+    info: ImageInfo

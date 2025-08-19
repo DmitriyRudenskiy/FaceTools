@@ -1,6 +1,6 @@
 from src.application.services.face_detection_service import (
     FaceDetectionService,
-)  # <<<--- НОВОЕ ИМЯ ФАЙЛА
+)
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
 from src.infrastructure.clustering.reference_table_printer import ReferenceTablePrinter
 from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
@@ -11,16 +11,17 @@ from src.infrastructure.detection.yolo_detector import (
 from src.infrastructure.image.os_image_loader import OSImageLoader
 from src.infrastructure.persistence.file_system_organizer import FileSystemOrganizer
 from src.infrastructure.persistence.group_organizer import GroupOrganizer
+from src.application.services.face_crop_service import FaceCropService
 
 
 class DependencyInjector:
     """Контейнер зависимостей для всего приложения"""
 
-    def get_face_clustering_service(
+    def get_face_detection_service(
         self,
     ) -> (
         FaceDetectionService
-    ):  # <<<--- Тип возвращаемого значения остался прежним, так как класс переименован
+    ):
         """Создает и возвращает сервис извлечения лиц"""
         file_organizer = FileSystemOrganizer()
         return FaceDetectionService(  # <<<--- Имя класса
@@ -51,3 +52,19 @@ class DependencyInjector:
         )
 
         return DeepFaceFaceComparator()
+
+    def get_face_crop_service(self): # Или другой метод, где происходит ошибка
+        """Создает и возвращает сервис вырезания лиц"""
+        # Убедитесь, что здесь используются правильные классы и импорты
+        file_organizer = FileSystemOrganizer() # Убедитесь, что это импортировано
+        face_detector = YOLOFaceDetector() # Убедитесь, что это импортировано
+        bbox_processor = DefaultBoundingBoxProcessor() # Убедитесь, что это импортировано
+        image_loader = OSImageLoader() # Убедитесь, что это импортировано
+        file_organizer = FileSystemOrganizer()
+
+        return FaceCropService(
+            file_organizer=file_organizer,
+            face_detector=face_detector,
+            bbox_processor=bbox_processor,
+            image_loader=image_loader
+        )
