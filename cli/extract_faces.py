@@ -122,6 +122,8 @@ def main():
         print(traceback.format_exc())
         return 1 # Ошибка
 
+    return 0 if success else 1
+
 if __name__ == "__main__":
     # Запускаем основную функцию и выходим с соответствующим кодом
     sys.exit(main())

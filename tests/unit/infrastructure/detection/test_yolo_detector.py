@@ -21,8 +21,7 @@ def test_detect_faces(yolo_detector):
 
     # Создаем тестовые данные
     mock_results = MagicMock()
-    # Используем правильный формат для bounding boxes
-    mock_results.boxes.xyxy = [[10, 10, 50, 50], [60, 60, 90, 90]]
+    mock_results.boxes.xyxy = torch.tensor([[10, 10, 50, 50], [60, 60, 90, 90]])
     mock_model.return_value = [mock_results]
 
     # Создаем тестовое изображение
