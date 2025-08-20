@@ -3,3 +3,6 @@ min-public-methods=1
 
 [MESSAGES CONTROL]
 disable=missing-function-docstring
+
+[MASTER]
+init-hook="import sys; sys.path.insert(0, 'path/to/project_root')"
