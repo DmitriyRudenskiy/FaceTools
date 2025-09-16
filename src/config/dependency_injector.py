@@ -2,7 +2,7 @@ from src.application.services.face_crop_service import FaceCropService
 from src.application.services.face_detection_service import FaceDetectionService
 from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
 from src.infrastructure.clustering.reference_table_printer import ReferenceTablePrinter
-from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
+from src.infrastructure.comparison.deepface_comparator import DeepFaceComparator
 from src.infrastructure.detection.yolo_detector import (
     DefaultBoundingBoxProcessor,
     YOLOFaceDetector,
@@ -41,13 +41,13 @@ class DependencyInjector:
         return GroupOrganizer(groups_data, destination_directory)
 
     # В класс DependencyInjector добавляем новый метод:
-    def get_deepface_face_comparator(self) -> DeepFaceFaceComparator:
+    def get_deepface_face_comparator(self) -> DeepFaceComparator:
         """Создает и возвращает компаратор на основе DeepFace"""
         from src.infrastructure.comparison.deepface_comparator import (
-            DeepFaceFaceComparator,
+            DeepFaceComparator,
         )
 
-        return DeepFaceFaceComparator()
+        return DeepFaceComparator()
 
     def get_face_crop_service(self):
         """Создает и возвращает сервис вырезания лиц"""

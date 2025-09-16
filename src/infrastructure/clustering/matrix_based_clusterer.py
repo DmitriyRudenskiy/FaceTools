@@ -7,7 +7,7 @@ import numpy as np
 from src.core.interfaces.clusterer import Clusterer
 from src.core.interfaces.face_comparator import FaceComparator
 from src.domain.cluster import Cluster, ClusteringResult
-from src.infrastructure.comparison.deepface_comparator import DeepFaceFaceComparator
+from src.infrastructure.comparison.deepface_comparator import DeepFaceComparator
 
 
 # Просто пример для демонстрации
@@ -58,12 +58,12 @@ class MatrixClusterer(Clusterer):
     # В существующий класс CompareMatrix добавляем методы:
 
     def fill_deepface(
-        self, comparator: DeepFaceFaceComparator, image_paths: List[str]
+        self, comparator: DeepFaceComparator, image_paths: List[str]
     ) -> None:
         """
         Заполняет матрицу схожести на основе DeepFace компаратора
         Args:
-            comparator: Реализация DeepFaceFaceComparator для сравнения лиц
+            comparator: Реализация DeepFaceComparator для сравнения лиц
             image_paths: Список путей к изображениям
         """
         size = self.matrix.shape[0]

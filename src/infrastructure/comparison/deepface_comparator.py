@@ -42,7 +42,7 @@ class FaceEmbeddingStorage:
         self.storage.append((embedding, image_path))
 
 
-class FaceRecognitionSystem:
+class DeepFaceComparator:
     """Система распознавания лиц с использованием DeepFace"""
 
     def __init__(self):

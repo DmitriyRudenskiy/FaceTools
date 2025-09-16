@@ -1,10 +1,13 @@
+# переходим в директорию
+
 # Разбиваем видео на кадры
+ffmpeg -i 'input.mp4'  -q:v 2 frame_%05d.jpg
 
 # Вырезаем все лица из кадров
-python /Users/user/PycharmProjects/FaceCluster/cli/extract_faces.py '/Users/user/Downloads/_face_Lea E'
+python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s .
 
 # Группируем лица по схожести
-python /Users/user/PycharmProjects/FaceTools/cli/face_cluster.py -s '/Users/user/Downloads/_face_Lea E/faces' -d ./grouped_photos
+python /Users/user/PycharmProjects/FaceTools/cli/face_cluster.py -s './faces' -d ./grouped_photos
 
 # Открываем страницу и загружаем созданный файл
 groups.json -> public/show_groups.html
@@ -12,7 +15,11 @@ groups.json -> public/show_groups.html
 # Анализируем группу
 python /Users/user/PycharmProjects/FaceTools/cli/deepface_face_cluster.py -s '/Users/user/Downloads/_face_Lea E/grouped_photos/lea_e_00271_face_1'
 
-
+/Applications/Blender.app/Contents/MacOS/Blender \
+--background \
+--python "/Users/user/PycharmProjects/FaceTools/cli/render_script.py" \
+-- "/Users/user/Downloads/20250913_001.glb" \
+--verbose 5
 
 python /Users/user/PycharmProjects/FaceTools/cli/collage.py -s /Users/user/Downloads/1
 
@@ -26,3 +33,4 @@ python /Users/user/PycharmProjects/FaceTools/cli/collage.py -s /Users/user/Downl
    - Создание коллажей размером 2x2, 3x3 и 4x4
    - Случайное перемешивание изображений перед созданием коллажей
    - Сохранение результатов в указанную директорию
+
