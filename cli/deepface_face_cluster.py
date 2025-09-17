@@ -52,8 +52,8 @@ def main():
     """Основная функция скрипта."""
     parser = argparse.ArgumentParser(description="Кластеризация лиц с использованием DeepFace.")
     parser.add_argument('-s', '--src', required=True, help='Путь к директории с изображениями')
-    parser.add_argument('-o', '--output', default='deepface_groups.json',
-                        help='Путь к выходному JSON файлу (по умолчанию: deepface_groups.json)')
+    parser.add_argument('-o', '--output', default='matrix.json',
+                        help='Путь к выходному JSON файлу (по умолчанию: matrix.json)')
     parser.add_argument('-d', '--dest', help='Директория для организации файлов по группам')
     parser.add_argument('-t', '--threshold', type=float, default=0.7,
                         help='Порог для кластеризации (по умолчанию: 0.7)')

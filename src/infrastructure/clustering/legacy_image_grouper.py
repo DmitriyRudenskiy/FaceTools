@@ -2,11 +2,10 @@ import os
 import time
 from typing import List
 
-from src.core.interfaces.clusterer import Clusterer
 from src.domain.cluster import Cluster, ClusteringResult
 
 
-class ImageGrouper(Clusterer):
+class ImageGrouper():
     """Группировка изображений по схожести лиц"""
 
     def __init__(self, similarity_matrix, image_paths):
@@ -26,7 +25,7 @@ class ImageGrouper(Clusterer):
             count = 0
             for j in group_indices:
                 if i != j and self.similarity_matrix[i][j] is not None:
-                    distance = self.similarity_matrix[i][j][1]
+                    distance = self.similarity_matrix[i][j]
                     total_distance += distance
                     count += 1
             if count > 0:
@@ -54,13 +53,16 @@ class ImageGrouper(Clusterer):
             self.used_indices.add(i)
             # Проверяем все последующие изображения в строке
             for j in range(i + 1, self.num_images):
+
                 # Если изображение j уже использовано, пропускаем
                 if j in self.used_indices:
                     continue
+
                 # Получаем результат сравнения из матрицы
                 result = self.similarity_matrix[i][j]
+
                 # Проверяем, похожи ли лица (result[0] == True)
-                if result is not None and result[0]:
+                if result > 0.65:
                     # Добавляем изображение j в текущую группу
                     current_group.append(j)
                     self.used_indices.add(j)
@@ -93,8 +95,9 @@ class ImageGrouper(Clusterer):
                 min_avg_distance_index = group_indices[0]
             representative_image_path = self.image_paths[min_avg_distance_index]
             # Подготавливаем данные для JSON
+
             group_filenames = [
-                os.path.basename(self.image_paths[idx]) for idx in group_indices
+                self.image_paths[idx] for idx in group_indices
             ]
             group_full_paths = [self.image_paths[idx] for idx in group_indices]
             representative_filename = os.path.basename(representative_image_path)
@@ -111,9 +114,6 @@ class ImageGrouper(Clusterer):
             )
             final_groups_data.append(group_data)
 
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        print(f"Группировка завершена за {elapsed_time:.2f} секунд")
         return final_groups_data  # Возвращаем подготовленные и отсортированные данные
 
     def print_groups(self):
@@ -131,7 +131,7 @@ class ImageGrouper(Clusterer):
         print(f"Найдено групп: {len(groups_data)}")
         return groups_data  # Возвращаем данные
 
-    def cluster(self, image_paths: List[str]) -> ClusteringResult:
+    def cluster(self) -> ClusteringResult:
         """Выполняет кластеризацию и возвращает результат"""
         # В данном случае image_paths уже переданы в конструкторе
         groups_data = self.group_images()
@@ -147,12 +147,11 @@ class ImageGrouper(Clusterer):
                     if p == path:
                         used_indices_in_groups.add(idx)
                         break
+
         unrecognized_indices = all_indices - used_indices_in_groups
         unrecognized_images = []
         for idx in unrecognized_indices:
-            full_path = self.image_paths[idx]
-            filename = os.path.basename(full_path)
-            unrecognized_images.append({"filename": filename, "full_path": full_path})
+            unrecognized_images.append({"filename": self.image_paths[idx], "full_path": ""})
 
         return ClusteringResult(
             timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
