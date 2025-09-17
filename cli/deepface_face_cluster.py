@@ -41,7 +41,7 @@ sys.path.insert(0, project_root)
 
 from src.infrastructure.file.image_loader import ImageLoader
 from src.domain.сompare_matrix import CompareMatrix
-from src.infrastructure.comparison.deepface_comparator import FaceRecognitionSystem
+from src.infrastructure.comparison.deepface_comparator import DeepFaceComparator
 
 # Добавляем корневую директорию в sys.path, если она еще не добавлена
 if str(root_dir) not in sys.path:
@@ -79,18 +79,16 @@ def main():
 
     print("Инициализация компаратора DeepFace...")
 
-    comparator = FaceRecognitionSystem()
-    comparator.init(image_paths)
+    comparator = DeepFaceComparator()
+    load_image_paths = comparator.init(image_paths)
+    num_images = len(load_image_paths)
 
-    if comparator.storage.get_face_count() != len(image_paths):
-        print("Ошибка: Не удалось загрузить все эмбеддинги.")
-        return 1
+    if num_images != len(image_paths):
+        print(f"[WARNING] Не удалось загрузить все эмбеддинги. Загружено {num_images} из {len(image_paths)}")
 
     print("Создание матрицы схожести...")
 
-    matrix = CompareMatrix(image_paths)
-
-    num_images = len(image_paths)
+    matrix = CompareMatrix(load_image_paths)
 
     for i in range(num_images):
         for j in range(i, num_images):

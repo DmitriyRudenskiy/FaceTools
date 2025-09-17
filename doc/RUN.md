@@ -7,7 +7,10 @@ ffmpeg -i 'input.mp4'  -q:v 2 frame_%05d.jpg
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s .
 
 # Группируем лица по схожести
-python /Users/user/PycharmProjects/FaceTools/cli/face_cluster.py -s './faces' -d ./grouped_photos
+python /Users/user/PycharmProjects/FaceTools/cli/deepface_face_cluster.py -s './faces/1' -d ./grouped_photos
+
+# С указанием порога
+python /Users/user/PycharmProjects/FaceTools/cli/group_files.py deepface_groups.json groups --threshold 0.3
 
 # Открываем страницу и загружаем созданный файл
 groups.json -> public/show_groups.html

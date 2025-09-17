@@ -13,6 +13,7 @@ from src.core.interfaces import FaceDetector
 from src.core.exceptions import FaceDetectionError
 
 
+
 class YOLOFaceDetector(FaceDetector):
     """Детекция и сравнение лиц с использованием YOLO"""
 
@@ -100,3 +101,33 @@ class YOLOFaceDetector(FaceDetector):
 
         except Exception as e:
             raise FaceDetectionError(f"Ошибка сравнения лиц: {str(e)}") from e
+
+
+class DefaultBoundingBoxProcessor:
+    """Простая реализация обработчика bounding box'ов по умолчанию."""
+
+    def merge_overlapping(self, boxes: List[List[float]], iou_threshold: float = 0.5) -> List[List[float]]:
+        """
+        Заглушка для функции слияния пересекающихся боксов.
+        В текущей реализации просто возвращает исходные боксы.
+        """
+        # TODO: Реализовать алгоритм Non-Maximum Suppression (NMS)
+        return boxes
+
+    def calculate_square_crop(
+            self, bbox: List[float], image_size: Tuple[int, int]
+    ) -> Tuple[int, int, int, int]:
+        """
+        Рассчитывает координаты квадратной обрезки на основе bounding box.
+        Делегирует расчет вспомогательному классу SquareCropCalculator.
+        """
+        from src.utils.image_utils import SquareCropCalculator
+        calculator = SquareCropCalculator()
+        x1, y1, x2, y2 = bbox
+        # SquareCropCalculator ожидает целочисленные координаты
+        crop_coords = calculator.calculate_crop(
+            (int(x1), int(y1), int(x2), int(y2)),
+            image_size[0],
+            image_size[1]
+        )
+        return crop_coords

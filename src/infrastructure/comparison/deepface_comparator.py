@@ -51,8 +51,10 @@ class DeepFaceComparator:
         self.distance_metric = "cosine"
         self.model_name = "ArcFace"
 
-    def init(self, image_paths: List[str]):
+    def init(self, image_paths: List[str]) -> List[str]:
         """Инициализация хранилища эмбеддингов для списка изображений"""
+        successful_paths = []  # Список успешно обработанных путей
+
         for image_path in image_paths:
             try:
                 embedding_objs = DeepFace.represent(
@@ -66,8 +68,11 @@ class DeepFaceComparator:
                 embedding = np.array(embedding)
 
                 self.storage.add_to_storage(embedding, image_path)
+                successful_paths.append(image_path)  # Добавляем в список успешных
             except Exception as e:
-                print(f"Ошибка при обработке {image_path}: {e}")
+                print(f"Ошибка при обработке {image_path}")
+
+        return successful_paths  # Возвращаем только успешно обработанные файлы
 
     def compare_faces(self, face1_path: str, face2_path: str) -> Tuple[bool, float]:
         """Сравнивает два лица и возвращает (совпадение, расстояние)"""
