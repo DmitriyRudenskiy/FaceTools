@@ -2,7 +2,11 @@ from typing import List, Tuple, Dict, Any
 import numpy as np
 from deepface import DeepFace
 import cv2
-
+import os
+import re
+import tempfile
+import shutil
+from pathlib import Path
 
 class FaceEmbeddingStorage:
     """Класс для хранения и управления эмбеддингами лиц"""
@@ -51,11 +55,28 @@ class DeepFaceComparator:
         self.distance_metric = "cosine"
         self.model_name = "ArcFace"
 
+    def sanitize_path(self, path): 
+        """Проверяет путь на наличие неанглийских символов и копирует файл во временную папку при необходимости."""
+        if re.search(r'[^\x00-\x7F]', str(path)):
+            # Создаем временный файл с английским именем
+            temp_dir = tempfile.mkdtemp()
+            filename = Path(path).name
+            temp_path = os.path.join(temp_dir, filename)
+
+            # Копируем файл во временную папку
+            shutil.copy2(path, temp_path)
+            return temp_path, temp_dir
+        return path, None
+
     def init(self, image_paths: List[str]) -> List[str]:
         """Инициализация хранилища эмбеддингов для списка изображений"""
         successful_paths = []  # Список успешно обработанных путей
 
         for image_path in image_paths:
+            sanitized_path, temp_dir = self.sanitize_path(image_path)
+            if temp_dir:
+                image_path = sanitized_path
+
             try:
                 embedding_objs = DeepFace.represent(
                     img_path=image_path,
@@ -70,7 +91,7 @@ class DeepFaceComparator:
                 self.storage.add_to_storage(embedding, image_path)
                 successful_paths.append(image_path)  # Добавляем в список успешных
             except Exception as e:
-                print(f"Ошибка при обработке {image_path}")
+                print(f"\n\nОшибка при обработке:\n\t{os.path.basename(image_path)}:\n\t{e}")
 
         return successful_paths  # Возвращаем только успешно обработанные файлы
 

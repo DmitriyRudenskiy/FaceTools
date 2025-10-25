@@ -39,8 +39,9 @@ class YOLOFaceDetector(FaceDetector):
                 x1, y1, x2, y2 = box.xyxy[0].tolist()
                 boxes.append([x1, y1, x2, y2])
             return boxes
-        except Exception as e:
-            raise FaceDetectionError(f"Ошибка детекции лиц: {str(e)}") from e
+        except Exception as e:  # Добавлено перехватывание конкретного исключения
+            print(f"Ошибка детекции лиц: {str(image)} - {str(e)}")
+            return []  # Возвращаем пустой список вместо None
 
     def extract_embeddings(self, image: Any) -> List[np.ndarray]:
         """

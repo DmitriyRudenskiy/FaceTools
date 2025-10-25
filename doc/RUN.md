@@ -1,28 +1,22 @@
 # переходим в директорию
 
 # Разбиваем видео на кадры
-ffmpeg -i 'input.mp4'  -q:v 2 frame_%05d.jpg
+ffmpeg -i 'video.mp4'  -q:v 2 frame_%05d.jpg
 
 # Вырезаем все лица из кадров
-python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s .
+python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.7
 
 # Группируем лица по схожести
-python /Users/user/PycharmProjects/FaceTools/cli/deepface_face_cluster.py -s './faces/1' -d ./grouped_photos
+python /Users/user/PycharmProjects/FaceTools/cli/deepface_face_cluster.py -s './faces'
 
 # С указанием порога
-python /Users/user/PycharmProjects/FaceTools/cli/group_files.py deepface_groups.json groups --threshold 0.3
+python /Users/user/PycharmProjects/FaceTools/cli/group_files.py -j matrix.json -o groups.json -d groups
 
 # Открываем страницу и загружаем созданный файл
 groups.json -> public/show_groups.html
 
 # Анализируем группу
 python /Users/user/PycharmProjects/FaceTools/cli/deepface_face_cluster.py -s '/Users/user/Downloads/_face_Lea E/grouped_photos/lea_e_00271_face_1'
-
-/Applications/Blender.app/Contents/MacOS/Blender \
---background \
---python "/Users/user/PycharmProjects/FaceTools/cli/render_script.py" \
--- "/Users/user/Downloads/20250913_001.glb" \
---verbose 5
 
 python /Users/user/PycharmProjects/FaceTools/cli/collage.py -s /Users/user/Downloads/1
 

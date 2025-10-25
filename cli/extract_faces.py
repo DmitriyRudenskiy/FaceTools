@@ -21,7 +21,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Detect and save faces from images')
     parser.add_argument('-s', '--source', required=True, help='Path to image directory')
     parser.add_argument('-o', '--output', default='faces', help='Output directory')
-    parser.add_argument('-p', '--padding', type=float, default=0.0,
+    parser.add_argument('-p', '--padding', type=float, default=0.3,
                         help='Padding ratio around face (e.g., 0.2 for 20%%)')
     args = parser.parse_args()
 
@@ -34,6 +34,7 @@ def main() -> None:
     images = loader.load_images(args.source)
 
     for image_path in images:
+
         faces = detector.detect(image_path)
         base_name = Path(image_path).stem
 

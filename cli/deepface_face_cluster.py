@@ -83,6 +83,10 @@ def main():
     load_image_paths = comparator.init(image_paths)
     num_images = len(load_image_paths)
 
+    if not num_images:
+        print(f"[WARNING] Загруженой 0 эмбеддингов")
+        return None
+
     if num_images != len(image_paths):
         print(f"[WARNING] Не удалось загрузить все эмбеддинги. Загружено {num_images} из {len(image_paths)}")
 

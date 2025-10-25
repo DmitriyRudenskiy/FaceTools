@@ -62,7 +62,7 @@ class ImageGrouper():
                 result = self.similarity_matrix[i][j]
 
                 # Проверяем, похожи ли лица (result[0] == True)
-                if result > 0.65:
+                if result > 0.89:
                     # Добавляем изображение j в текущую группу
                     current_group.append(j)
                     self.used_indices.add(j)
