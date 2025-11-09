@@ -1,6 +1,6 @@
 from src.application.services.face_crop_service import FaceCropService
 from src.application.services.face_detection_service import FaceDetectionService
-from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
+from src.infrastructure.clustering.image_grouper import ImageGrouper
 from src.infrastructure.clustering.reference_table_printer import ReferenceTablePrinter
 from src.infrastructure.comparison.deepface_comparator import DeepFaceComparator
 from src.infrastructure.detection.yolo_detector import (

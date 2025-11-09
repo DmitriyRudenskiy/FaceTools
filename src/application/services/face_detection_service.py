@@ -10,7 +10,7 @@ from src.core.interfaces import (
     ImageLoader,
     ResultSaver,
 )
-from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
+from src.infrastructure.clustering.image_grouper import ImageGrouper
 
 
 class FaceDetectionService:

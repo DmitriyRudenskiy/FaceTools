@@ -43,12 +43,47 @@ def main() -> None:
             img = img.convert('RGB')
 
             for i, bbox in enumerate(faces):
+                # Calculate target square coordinates without boundary constraints
+                x1, y1, x2, y2 = bbox
+                center_x = (x1 + x2) // 2
+                center_y = (y1 + y2) // 2
+                face_width = x2 - x1
+                face_height = y2 - y1
+                base_side = max(face_width, face_height)
+
+                # Calculate side length with padding
+                side_length = base_side
+                if crop_calculator.padding_ratio > 0:
+                    side_length = int(base_side * (1 + crop_calculator.padding_ratio))
+
+                half_side = side_length // 2
+                target_x1 = center_x - half_side
+                target_y1 = center_y - half_side
+                target_x2 = center_x + half_side
+                target_y2 = center_y + half_side
+
+                # Get boundary-constrained crop coordinates
                 crop_x1, crop_y1, crop_x2, crop_y2 = crop_calculator.calculate_crop(
                     bbox, img_width, img_height
                 )
-                crop_img = img.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+
+                # Calculate offsets within the target square (ensure integers)
+                x_offset = int(crop_x1 - target_x1)
+                y_offset = int(crop_y1 - target_y1)
+                crop_width = crop_x2 - crop_x1
+                crop_height = crop_y2 - crop_y1
+
+                # Create a new square canvas filled with acid green
+                acid_green = (0, 255, 0)  # Acid green color (RGB)
+                square_img = Image.new('RGB', (side_length, side_length), acid_green)
+
+                # Paste the visible part of the image into the square
+                if crop_width > 0 and crop_height > 0:
+                    crop_region = img.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+                    square_img.paste(crop_region, (x_offset, y_offset))
+
                 output_path = Path(args.output) / f"{base_name}_face_{i + 1}.jpg"
-                crop_img.save(output_path)
+                square_img.save(output_path)
                 print(f"Saved face: {output_path}")
 
 if __name__ == "__main__":

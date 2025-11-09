@@ -11,8 +11,10 @@ sys.path.insert(0, project_root)
 
 # pylint: disable=import-error,wrong-import-position
 from src.domain.сompare_matrix import CompareMatrix
-from src.infrastructure.clustering.legacy_image_grouper import ImageGrouper
+from src.infrastructure.clustering.image_grouper import ImageGrouper
 # pylint: enable=import-error,wrong-import-position
+
+from src.infrastructure.clustering.hierarchical_clusterer import HierarchicalClusterer
 
 
 def _organize_files(clusters, destination_directory):
