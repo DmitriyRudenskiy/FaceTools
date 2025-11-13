@@ -22,20 +22,36 @@ class FaceEmbeddingStorage:
         return -1
 
     def compare_by_index(self, index1: int, index2: int) -> float:
-        """Сравнение двух изображений по индексам в хранилище"""
+        """Сравнение двух изображений по индексам в хранилище
+
+        Возвращает меру схожести в диапазоне [0, 1], где:
+        - 1.0 = полное совпадение (евклидово расстояние = 0)
+        - 0.0 = максимальное несовпадение (евклидово расстояние = 2)
+
+        Используется преобразование: (cosθ + 1.0) / 2.0
+        """
         emb1 = self.storage[index1][0]
         emb2 = self.storage[index2][0]
 
         if emb1 is None or emb2 is None:
-            return float('inf')
+            return 0.0  # Теперь возвращаем минимальную схожесть вместо inf
 
+        # Вычисляем косинусное сходство (cosθ)
         dot_product = np.dot(emb1, emb2)
         norm_emb1 = np.linalg.norm(emb1)
         norm_emb2 = np.linalg.norm(emb2)
-        similarity = dot_product / (norm_emb1 * norm_emb2)
-        distance = 1 - similarity
 
-        return distance
+        # Защита от деления на ноль
+        if norm_emb1 == 0 or norm_emb2 == 0:
+            return 0.0
+
+        cos_theta = dot_product / (norm_emb1 * norm_emb2)
+
+        # Преобразуем в меру схожести [0, 1]
+        similarity = (cos_theta + 1.0) / 2.0
+
+        # Гарантируем корректный диапазон значений
+        return max(0.0, min(1.0, similarity))
 
     def get_face_count(self) -> int:
         """Возвращает количество лиц в хранилище"""

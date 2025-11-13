@@ -1,94 +1,68 @@
-from typing import List, Dict
+import time
+from typing import List, Dict, Any, Optional
+import numpy as np
+
+# Исправленный импорт класса Cluster
+from src.domain.cluster import Cluster, ClusteringResult
 from src.core.interfaces.clusterer import Clusterer
-from src.domain.cluster import ClusteringResult
 
 
-class ImageGrouper():
+class ImageGrouper:
     """Группировка изображений по схожести лиц с поддержкой различных алгоритмов кластеризации через внедрение зависимостей"""
 
-    def __init__(self, similarity_matrix, image_paths, clusterer: Clusterer):
+    def __init__(self, similarity_matrix: List[List[float]], image_paths: List[str], clusterer: Clusterer):
         """Args:
-            similarity_matrix: матрица схожести N x N
-            image_paths: пути к изображениям
-            clusterer: экземпляр Clusterer, реализующий алгоритм кластеризации
+        similarity_matrix: матрица схожести N x N
+        image_paths: пути к изображениям
+        clusterer: экземпляр Clusterer, реализующий алгоритм кластеризации
         """
-        self.similarity_matrix = similarity_matrix
+        # Создаем копию матрицы, чтобы не изменять оригинальную
+        self.similarity_matrix = [row[:] for row in similarity_matrix]
         self.image_paths = image_paths
         self.num_images = len(image_paths)
         self.clusterer = clusterer
         self.groups = []
         self.evaluation_metrics = {}
+        # Валидация и коррекция матрицы
+        self._validate_and_correct_matrix()
 
-        # Валидация матрицы
-        self._validate_matrix()
-
-    def _validate_matrix(self):
-        """Проверяет корректность матрицы схожести"""
+    def _validate_and_correct_matrix(self):
+        """Проверяет и корректирует матрицу схожести"""
         # Проверка размерности
         if len(self.similarity_matrix) != self.num_images:
             raise ValueError("Размер матрицы схожести не совпадает с количеством изображений")
 
-        # Проверка симметричности и диапазона значений
+        # Проверка и коррекция
         for i in range(self.num_images):
+            # Корректируем диагональные элементы
             if abs(self.similarity_matrix[i][i] - 1.0) > 1e-5:
-                raise ValueError(
-                    f"Диагональный элемент [{i},{i}] должен быть равен 1.0, найдено {self.similarity_matrix[i][i]}")
+                print(
+                    f"Предупреждение: диагональный элемент [{i},{i}] должен быть равен 1.0, найдено {self.similarity_matrix[i][i]}. Исправляем на 1.0")
+                self.similarity_matrix[i][i] = 1.0
 
             for j in range(i + 1, self.num_images):
+                # Корректируем симметричность
                 if abs(self.similarity_matrix[i][j] - self.similarity_matrix[j][i]) > 1e-5:
-                    raise ValueError(
-                        f"Матрица не симметрична: [{i},{j}]={self.similarity_matrix[i][j]}, [{j},{i}]={self.similarity_matrix[j][i]}")
+                    avg = (self.similarity_matrix[i][j] + self.similarity_matrix[j][i]) / 2
+                    self.similarity_matrix[i][j] = avg
+                    self.similarity_matrix[j][i] = avg
+                    print(
+                        f"Предупреждение: матрица не симметрична: элементы [{i},{j}] и [{j},{i}] отличаются. Используем среднее значение: {avg}")
 
-                if not (0 <= self.similarity_matrix[i][j] <= 1):
-                    raise ValueError(
-                        f"Значение схожести [{i},{j}] должно быть в диапазоне [0,1], найдено {self.similarity_matrix[i][j]}")
+                # Корректируем диапазон
+                if self.similarity_matrix[i][j] < 0.0:
+                    print(
+                        f"Предупреждение: элемент [{i},{j}] меньше 0.0, найдено {self.similarity_matrix[i][j]}. Исправляем на 0.0")
+                    self.similarity_matrix[i][j] = 0.0
+                    self.similarity_matrix[j][i] = 0.0
+                elif self.similarity_matrix[i][j] > 1.0:
+                    print(
+                        f"Предупреждение: элемент [{i},{j}] больше 1.0, найдено {self.similarity_matrix[i][j]}. Исправляем на 1.0")
+                    self.similarity_matrix[i][j] = 1.0
+                    self.similarity_matrix[j][i] = 1.0
 
-    def _evaluate_clustering(self, groups: List[List[int]]) -> Dict:
-        """Оценивает качество кластеризации без ground truth"""
-        if not groups or len(groups) < 2:
-            return {
-                'silhouette_score': -1,
-                'avg_cluster_similarity': 0,
-                'cluster_sizes': [len(g) for g in groups]
-            }
-
-        # Создаем метки кластеров для silhouette_score
-        n = len(self.similarity_matrix)
-        labels = np.full(n, -1)
-        for cluster_id, group in enumerate(groups):
-            for idx in group:
-                labels[idx] = cluster_id
-
-        # Вычисляем силуэтный коэффициент
-        distance_matrix = 1 - np.array(self.similarity_matrix)
-        np.fill_diagonal(distance_matrix, 0)
-
-        try:
-            silhouette = silhouette_score(distance_matrix, labels, metric='precomputed')
-        except:
-            silhouette = -1  # Не можем вычислить (например, один кластер)
-
-        # Средняя схожесть внутри кластеров
-        def calculate_avg_similarity(cluster_indices):
-            total_similarity = 0.0
-            count = 0
-            for i_idx, i in enumerate(cluster_indices):
-                for j in cluster_indices[i_idx + 1:]:
-                    total_similarity += self.similarity_matrix[i][j]
-                    count += 1
-            return total_similarity / count if count > 0 else 0.0
-
-        avg_similarity = np.mean([calculate_avg_similarity(g) for g in groups])
-
-        self.evaluation_metrics = {
-            'silhouette_score': silhouette,
-            'avg_cluster_similarity': avg_similarity,
-            'cluster_sizes': [len(g) for g in groups]
-        }
-        return self.evaluation_metrics
-
-    def _calculate_average_similarity(self, group_indices):
-        """Вычисляет среднюю схожесть внутри группы"""
+    def _calculate_average_similarity(self, group_indices: List[int]) -> float:
+        """Рассчитывает среднюю схожесть внутри группы"""
         total_similarity = 0.0
         count = 0
         for i_idx, i in enumerate(group_indices):
@@ -98,17 +72,55 @@ class ImageGrouper():
                 count += 1
         return total_similarity / count if count > 0 else 0.0
 
-    def group_images(self):
-        """Группирует изображения, используя выбранный метод кластеризации."""
-        start_time = time.time()
-        method_name = self.clusterer.get_params()['method']
-        print(f"Начинаю группировку изображений методом '{method_name}'...")
+    def _evaluate_clustering(self, groups: List[List[int]]) -> Dict[str, Any]:
+        """Оценивает качество кластеризации"""
+        if not groups or len(groups) < 2:
+            return {
+                'silhouette_score': -1,
+                'avg_cluster_similarity': 0,
+                'cluster_sizes': [len(g) for g in groups]
+            }
+
+        # Подготовка меток для silhouette_score
+        labels = np.full(self.num_images, -1)
+        for cluster_id, group_indices in enumerate(groups):
+            for idx in group_indices:
+                labels[idx] = cluster_id
+
+        # Вычисляем silhouette_score
+        # Для этого нужно преобразовать матрицу схожести в матрицу расстояний
+        distance_matrix = 1.0 - np.array(self.similarity_matrix)
+
+        # silhouette_score требует минимум 2 кластера
+        if len(set(labels)) >= 2:
+            silhouette = silhouette_score(distance_matrix, labels, metric='precomputed')
+        else:
+            silhouette = -1
+
+        # Средняя схожесть внутри кластеров
+        avg_similarity = 0.0
+        for group_indices in groups:
+            avg_similarity += self._calculate_average_similarity(group_indices)
+        avg_similarity /= len(groups)
+
+        return {
+            'silhouette_score': silhouette,
+            'avg_cluster_similarity': avg_similarity,
+            'cluster_sizes': [len(g) for g in groups]
+        }
+
+    def cluster(self) -> ClusteringResult:
+        """Основной метод для выполнения кластеризации"""
+        print(f"Начинаю группировку изображений методом '{self.clusterer.get_params()['method']}'...")
 
         # Выполняем кластеризацию
+        start_time = time.time()
         self.groups = self.clusterer.cluster(self.similarity_matrix)
+        clustering_time = time.time() - start_time
+        print(f"Кластеризация завершена за {clustering_time:.2f} секунд")
 
         # Оценка качества кластеризации
-        self._evaluate_clustering(self.groups)
+        self.evaluation_metrics = self._evaluate_clustering(self.groups)
         print(f"Качество кластеризации: силуэтный коэффициент = {self.evaluation_metrics['silhouette_score']:.4f}, "
               f"средняя схожесть = {self.evaluation_metrics['avg_cluster_similarity']:.4f}")
         print(f"Размеры кластеров: {self.evaluation_metrics['cluster_sizes']}")
@@ -117,67 +129,22 @@ class ImageGrouper():
         self.groups.sort(key=len, reverse=True)
 
         # Подготовка данных для возврата
-        final_groups_data = []
+        groups_data = []
         for i, group_indices in enumerate(self.groups):
             # Рассчитываем средние расстояния внутри группы
             avg_similarity = self._calculate_average_similarity(group_indices)
 
-            # Находим изображение с максимальной средней схожестью (представитель)
-            max_similarity = -1
-            representative_idx = group_indices[0]
-            for idx in group_indices:
-                total_similarity = 0
-                count = 0
-                for j in group_indices:
-                    if idx != j:
-                        total_similarity += self.similarity_matrix[idx][j]
-                        count += 1
-                if count > 0:
-                    avg_idx_similarity = total_similarity / count
-                    if avg_idx_similarity > max_similarity:
-                        max_similarity = avg_idx_similarity
-                        representative_idx = idx
-
-            representative_image_path = self.image_paths[representative_idx]
-            group_filenames = [self.image_paths[idx] for idx in group_indices]
-            group_full_paths = [self.image_paths[idx] for idx in group_indices]
-            representative_filename = os.path.basename(representative_image_path)
-
+            # Создаем объект Cluster (исправлено: добавлен импорт)
             group_data = Cluster(
-                id=i + 1,
+                id=i,
                 size=len(group_indices),
-                representative=representative_filename,
-                representative_path=representative_image_path,
-                members=group_filenames,
-                members_paths=group_full_paths,
-                average_similarity=avg_similarity,
+                representative=self.image_paths[group_indices[0]],
+                representative_path=self.image_paths[group_indices[0]],
+                members=[self.image_paths[idx] for idx in group_indices],
+                members_paths=[self.image_paths[idx] for idx in group_indices],
+                average_similarity=avg_similarity
             )
-            final_groups_data.append(group_data)
-
-        end_time = time.time()
-        print(f"Группировка завершена за {end_time - start_time:.2f} секунд. "
-              f"Найдено {len(final_groups_data)} групп.")
-
-        return final_groups_data
-
-    def print_groups(self):
-        start_time = time.time()
-        groups_data = self.group_images()
-        end_time = time.time()
-        grouping_time = end_time - start_time
-        for group_data in groups_data:
-            print(f"Группа {group_data.id} (представлена {group_data.representative}, "
-                  f"схожесть={group_data.average_similarity:.4f}):")
-            for path in group_data.members:
-                print(f"  {path}")
-            print()
-        print(f"Общее время группировки: {grouping_time:.2f} секунд")
-        print(f"Найдено групп: {len(groups_data)}")
-        return groups_data
-
-    def cluster(self) -> ClusteringResult:
-        """Выполняет кластеризацию и возвращает результат"""
-        groups_data = self.group_images()
+            groups_data.append(group_data)
 
         # Подготавливаем нераспознанные изображения
         all_indices = set(range(self.num_images))
@@ -191,9 +158,13 @@ class ImageGrouper():
                     continue
 
         unrecognized_indices = all_indices - used_indices_in_groups
-        unrecognized_images = [{"filename": self.image_paths[idx], "full_path": self.image_paths[idx]}
-                               for idx in unrecognized_indices]
+        unrecognized_images = [
+            {"filename": os.path.basename(self.image_paths[idx]),
+             "full_path": self.image_paths[idx]}
+            for idx in unrecognized_indices
+        ]
 
+        # Возвращаем результат кластеризации
         return ClusteringResult(
             timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
             total_clusters=len(groups_data),

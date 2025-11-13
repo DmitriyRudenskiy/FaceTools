@@ -1,11 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List
-
 
 @dataclass
 class Cluster:
     """Группа похожих лиц"""
-
     id: int
     size: int
     representative: str
@@ -14,13 +12,13 @@ class Cluster:
     members_paths: List[str]
     average_similarity: float
 
-
 @dataclass
 class ClusteringResult:
     """Результат кластеризации"""
-
     timestamp: str
     total_clusters: int
     unrecognized_count: int
     clusters: List[Cluster]
     unrecognized_images: List[Dict[str, Any]]
+    clustering_params: Dict = field(default_factory=dict)
+    evaluation_metrics: Dict = field(default_factory=dict)

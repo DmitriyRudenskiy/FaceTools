@@ -98,12 +98,17 @@ def main():
         for j in range(i, num_images):
             if i == j:
                 # Расстояние от изображения до самого себя
-                matrix.set_value(i, j, 0.0)
+                matrix.set_value(i, j, 1.0)
             else:
                 # Сравниваем изображения
                 result = comparator.storage.compare_by_index(i, j)
+
+                print(f"{i} | {j}  | {result:.4f}")
+
                 matrix.set_value(i, j, result)
-                matrix.set_value(j, i, result)  # Матрица симметрична
+
+                # Матрица симметрична
+                matrix.set_value(j, i, result)
 
     matrix.to_json(args.output)
 

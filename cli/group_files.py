@@ -111,11 +111,16 @@ def main():
         return 1
 
     matrix_instance = CompareMatrix.from_json(args.json)
-
     print(f"Загружено {len(matrix_instance.legend)}x{len(matrix_instance.legend)}")
 
     """Группирует изображения по схожести лиц."""
-    grouper = ImageGrouper(matrix_instance.matrix, matrix_instance.legend)
+    # Создаем кластеризатор с параметрами
+    clusterer = HierarchicalClusterer(min_cluster_size=2, linkage_method='average', inconsistency_threshold=0.6)
+    grouper = ImageGrouper(
+        matrix_instance.matrix,
+        matrix_instance.legend,
+        clusterer
+    )
     clustering_result = grouper.cluster()
 
     # Выводим информацию о группах
