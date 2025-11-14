@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кадрирование изображений с сохранением координат</title>
+    <!-- Подключаем Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .cropper-container {
+            width: 33%; /* Ширина блока 33% */
+            min-width: 640px; /* Минимальная ширина 640px */
+            margin: 10px auto;
+            min-height: 640px; /* Минимальная высота блока с кадрированием */
+            height: calc(100vh / 1.3); /* Высота блока 1.3 от экрана */
+            overflow: hidden;
+        }
+        .image-list {
+            max-height: 80vh; /* Ограничение высоты списка изображений */
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr); /* Семь колонок */
+            gap: 10px;
+        }
+        .image-list .thumbnail-container {
+            position: relative;
+            cursor: pointer;
+        }
+        .image-list .thumbnail-container img {
+            width: 100%;
+            aspect-ratio: 1; /* Квадратные изображения */
+            object-fit: cover; /* Вписываем изображения в квадрат */
+        }
+        .image-list .thumbnail-container.active img {
+            border: 2px solid #007bff;
+        }
+        .image-list .thumbnail-container.cropped::after {
+            content: '✔';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: green;
+            font-size: 24px;
+            background: white;
+            border-radius: 50%;
+            width: 50%;
+            height: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .controls-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .status-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #0d6efd;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <!-- Левая колонка: оригинальное изображение и кнопки управления -->
+            <div class="col-md-6">
+                <div class="cropper-container">
+                    <img id="imageToCrop" src="#" alt="Ваше изображение" style="max-width: 100%; display: none;">
+                </div>
+                <div class="controls-section mt-2">
+                    <div>
+                        <button id="cropButton" class="btn btn-primary" style="display: none;">Кадрировать лицо</button>
+                        <button id="nextButton" class="btn btn-success" style="display: none;">Следующее изображение</button>
+                    </div>
+                    <button id="exportButton" class="btn btn-dark" style="display: none;">Экспортировать координаты</button>
+                </div>
+            </div>
+            <!-- Правая колонка: кнопка загрузки директории и галерея -->
+            <div class="col-md-6">
+                <!-- Кнопка загрузки директории -->
+                <div class="upload-section mb-3">
+                    <input type="file" id="directoryInput" class="form-control d-none" webkitdirectory directory multiple>
+                    <button id="loadDirectoryButton" class="btn btn-secondary">Загрузить директорию с изображениями</button>
+                </div>
+                <!-- Статус обработки -->
+                <div class="mb-3">
+                    <div class="progress" style="display: none;">
+                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;">0%</div>
+                    </div>
+                    <div id="statusText" class="text-center" style="display: none;"></div>
+                </div>
+                <!-- Галерея изображений -->
+                <div class="image-list" id="imageList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем Bootstrap JS и зависимости -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <!-- Подключаем Cropper.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let cropper;
+            let currentImageFile;
+            let currentImageIndex = 0;
+            let images = [];
+            let allFacesData = []; // Массив для хранения всех координат
+            let faceCount = 0; // Общий счетчик лиц
+
+            // Элементы интерфейса
+            const directoryInput = document.getElementById('directoryInput');
+            const loadDirectoryButton = document.getElementById('loadDirectoryButton');
+            const imageList = document.getElementById('imageList');
+            const imageToCrop = document.getElementById('imageToCrop');
+            const cropButton = document.getElementById('cropButton');
+            const nextButton = document.getElementById('nextButton');
+            const exportButton = document.getElementById('exportButton');
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('statusText');
+
+            // Фиксированные размеры
+            const TARGET_WIDTH = 640;
+            const TARGET_HEIGHT = 640; // Квадратное изображение
+            const ASPECT_RATIO = 1; // Соотношение сторон 1:1
+
+            // Обработчик для кнопки загрузки директории
+            loadDirectoryButton.addEventListener('click', function () {
+                directoryInput.click();
+            });
+
+            directoryInput.addEventListener('change', function (e) {
+                const files = Array.from(e.target.files).filter(file =>
+                    file.type.startsWith('image/') ||
+                    ['jpg', 'jpeg', 'png', 'webp'].includes(file.name.split('.').pop().toLowerCase())
+                );
+
+                if (files.length === 0) {
+                    alert('В выбранной директории нет изображений');
+                    return;
+                }
+
+                images = files;
+                currentImageIndex = 0;
+                allFacesData = [];
+                faceCount = 0;
+
+                // Показываем прогресс-бар
+                document.querySelector('.progress').style.display = 'block';
+                statusText.style.display = 'block';
+
+                // Загружаем превью изображений
+                loadPreviews();
+            });
+
+            function loadPreviews() {
+                let loadedCount = 0;
+                const total = images.length;
+
+                // Очищаем галерею
+                imageList.innerHTML = '';
+
+                images.forEach((file, index) => {
+                    const img = document.createElement('img');
+                    img.onload = function() {
+                        console.log(img.src);
+                        URL.revokeObjectURL(file);
+
+                        const container = document.createElement('div');
+                        container.classList.add('thumbnail-container');
+
+                        // Добавляем номер, если есть кадрированные лица
+                        const faceBadge = document.createElement('div');
+                        faceBadge.classList.add('status-badge');
+                        faceBadge.style.display = 'none';
+                        faceBadge.textContent = '0';
+                        container.appendChild(faceBadge);
+
+                        // Создаем обертку для изображения
+                        const wrapper = document.createElement('div');
+                        wrapper.style.position = 'relative';
+                        wrapper.appendChild(img.cloneNode(true));
+                        wrapper.appendChild(faceBadge);
+
+                        container.appendChild(wrapper);
+                        container.addEventListener('click', () => loadImageForCropping(file, index));
+                        imageList.appendChild(container);
+
+                        loadedCount++;
+                        updateProgress(loadedCount, total);
+
+                        if (loadedCount === total) {
+                            // После загрузки всех превью, загружаем первое изображение
+                            if (images.length > 0) {
+                                loadImageForCropping(images[0], 0);
+                            }
+                        }
+                    };
+                    img.onerror = function() {
+                        loadedCount++;
+                        updateProgress(loadedCount, total);
+                    };
+                    img.src = URL.createObjectURL(file);
+                    img.style.width = '100%';
+                    img.style.aspectRatio = '1';
+                    img.classList.add('img-thumbnail');
+                });
+            }
+
+            function updateProgress(loaded, total) {
+                const percent = Math.round((loaded / total) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressBar.textContent = `${percent}%`;
+                statusText.textContent = `Загрузка изображений: ${loaded} из ${total}`;
+
+                if (loaded === total) {
+                    setTimeout(() => {
+                        document.querySelector('.progress').style.display = 'none';
+                        statusText.style.display = 'none';
+                    }, 1000);
+                }
+            }
+
+            function loadImageForCropping(file, index) {
+                currentImageFile = file;
+                currentImageIndex = index;
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    imageToCrop.src = event.target.result;
+                    imageToCrop.style.display = 'block';
+
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+
+                    cropper = new Cropper(imageToCrop, {
+                        aspectRatio: ASPECT_RATIO,
+                        viewMode: 1,
+                        autoCropArea: 0.8,
+                        responsive: true,
+                        guides: true,
+                        center: true,
+                        highlight: true,
+                        cropBoxMovable: true,
+                        cropBoxResizable: true,
+                        toggleDragModeOnDblclick: false
+                    });
+
+                    cropButton.style.display = 'inline-block';
+                    nextButton.style.display = 'none';
+                    exportButton.style.display = 'inline-block';
+
+                    // Выделяем выбранное изображение в списке
+                    const containers = imageList.querySelectorAll('.thumbnail-container');
+                    containers.forEach(container => container.classList.remove('active'));
+                    containers[index].classList.add('active');
+
+                    // Обновляем счетчик лиц для этого изображения
+                    updateFaceCountBadge(index);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function updateFaceCountBadge(imageIndex) {
+                const count = allFacesData.filter(face =>
+                    face.image_path === images[imageIndex].name
+                ).length;
+
+                const containers = imageList.querySelectorAll('.thumbnail-container');
+                const badge = containers[imageIndex].querySelector('.status-badge');
+
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            cropButton.addEventListener('click', function () {
+                if (!cropper) return;
+
+                const cropData = cropper.getData(true);
+                const img = new Image();
+                img.onload = function() {
+                    const crop_x1 = Math.round(cropData.x);
+                    const crop_y1 = Math.round(cropData.y);
+                    const crop_x2 = Math.round(cropData.x + cropData.width);
+                    const crop_y2 = Math.round(cropData.y + cropData.height);
+
+                    // Сохраняем данные о кадрировании
+                    const faceData = {
+                        image_path: currentImageFile.name,
+                        face_index: faceCount++,
+                        bbox_original: [crop_x1, crop_y1, crop_x2, crop_y2],
+                        bbox_cropped: [crop_x1, crop_y1, crop_x2, crop_y2],
+                        image_size: [img.width, img.height],
+                        output_size: [TARGET_WIDTH, TARGET_HEIGHT]
+                    };
+                    allFacesData.push(faceData);
+
+                    // Обновляем счетчик лиц для текущего изображения
+                    updateFaceCountBadge(currentImageIndex);
+
+                    // Сохраняем кадрированное изображение
+                    cropper.getCroppedCanvas({
+                        width: TARGET_WIDTH,
+                        height: TARGET_HEIGHT
+                    }).toBlob(function (blob) {
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `face_${faceData.face_index}.jpg`;
+                        link.click();
+
+                        // Показываем кнопку "Следующее изображение"
+                        nextButton.style.display = 'inline-block';
+                        cropButton.style.display = 'none';
+
+                        alert(`Лицо сохранено!\n\nИмя файла: face_${faceData.face_index}.jpg\nКоординаты: [${crop_x1}, ${crop_y1}, ${crop_x2}, ${crop_y2}]`);
+                    }, 'image/jpeg', 0.95);
+                };
+                img.src = imageToCrop.src;
+            });
+
+            nextButton.addEventListener('click', function() {
+                // Переход к следующему изображению
+                if (currentImageIndex < images.length - 1) {
+                    loadImageForCropping(images[currentImageIndex + 1], currentImageIndex + 1);
+                } else {
+                    alert('Это последнее изображение в списке');
+                }
+            });
+
+            exportButton.addEventListener('click', function() {
+                if (allFacesData.length === 0) {
+                    alert('Нет данных для экспорта. Сначала кадрируйте хотя бы одно лицо.');
+                    return;
+                }
+
+                const jsonBlob = new Blob([JSON.stringify(allFacesData, null, 2)],
+                    {type: 'application/json'});
+
+                const jsonLink = document.createElement('a');
+                jsonLink.href = URL.createObjectURL(jsonBlob);
+                jsonLink.download = 'faces_coordinates.json';
+                jsonLink.click();
+
+                alert(`Экспорт координат завершен!\n\nСохранено ${allFacesData.length} лиц(а)\nФайл: faces_coordinates.json`);
+            });
+        });
+    </script>
+</body>
+</html>
