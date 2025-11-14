@@ -3,7 +3,6 @@
 <head>
     <title>Image Cropper Gallery with Save Functionality</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         .container {
             max-width: 1000px;
@@ -406,40 +405,31 @@
                             return;
                         }
 
-                        const reader = new FileReader();
-                        reader.onload = function () {
-                            const arrayBuffer = reader.result;
-                            const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
-                            const md5Hash = CryptoJS.MD5(wordArray).toString();
-                            const fileName = `${md5Hash}.jpg`;
+                        // Используем имя миниатюры для сохранения кадрированного изображения
+                        const facePath = currentData.face_path;
+                        const fileName = facePath.split('/').pop(); // Получаем только имя файла миниатюры
 
-                            const link = document.createElement('a');
-                            link.href = URL.createObjectURL(blob);
-                            link.download = fileName;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
 
-                            // Показываем сообщение об успехе
-                            cropSuccess.style.display = 'block';
-                            setTimeout(() => {
-                                cropSuccess.style.display = 'none';
-                            }, 3000);
+                        // Показываем сообщение об успехе
+                        cropSuccess.style.display = 'block';
+                        setTimeout(() => {
+                            cropSuccess.style.display = 'none';
+                        }, 3000);
 
-                            // Добавляем отметку о кадрировании
-                            const activeItem = document.querySelector('.gallery-item.active');
-                            if (activeItem) {
-                                activeItem.classList.add('cropped');
-                                activeItem.title = 'Кадрировано';
-                            }
+                        // Добавляем отметку о кадрировании
+                        const activeItem = document.querySelector('.gallery-item.active');
+                        if (activeItem) {
+                            activeItem.classList.add('cropped');
+                            activeItem.title = 'Кадрировано';
+                        }
 
-                            console.log('Изображение успешно сохранено:', fileName);
-                        };
-                        reader.onerror = function() {
-                            console.error('Ошибка чтения файла');
-                            alert('Ошибка при чтении файла');
-                        };
-                        reader.readAsArrayBuffer(blob);
+                        console.log('Изображение успешно сохранено:', fileName);
                     }, 'image/jpeg', 0.95);
                 } else {
                     console.error('Не удалось получить croppedCanvas');
