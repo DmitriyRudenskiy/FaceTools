@@ -7,7 +7,7 @@ ffmpeg -i 'video.mp4'  -q:v 2 frame_%05d.jpg
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.7
 
 # Группируем лица по схожести
-python /Users/user/PycharmProjects/FaceTools/cli/make_matrix.py -s './faces' -o matrix.json
+python /Users/user/PycharmProjects/FaceTools/cli/make_matrix.py -s './faces' -o matrix
 
 # С указанием порога
 python /Users/user/PycharmProjects/FaceTools/cli/group_files.py -j matrix.json -o groups.json -d groups
