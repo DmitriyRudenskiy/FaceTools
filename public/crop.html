@@ -207,30 +207,13 @@
 
             <div style="text-align: center;">
                 <img id="cropper-image" src="" alt="Original image">
-                <div class="note">
-                    <strong>Important:</strong> The image path in your JSON is local. For web use, replace with a web-accessible URL.
-                </div>
             </div>
 
             <div style="text-align: center; margin-top: 15px;">
-                <button id="crop-button" class="btn">Preview Cropped Image</button>
                 <button id="save-button" class="btn btn-save">Save Cropped Image as PNG</button>
             </div>
-
-            <img id="cropped-output" alt="Cropped result">
         </div>
 
-        <div class="instructions">
-            <h3>Instructions:</h3>
-            <ol>
-                <li>Enter or paste your JSON configuration containing multiple face entries</li>
-                <li>Select a face from the gallery to edit</li>
-                <li>Adjust the crop area by dragging the square selection box</li>
-                <li>Click "Preview Cropped Image" to see the result</li>
-                <li>Click "Save Cropped Image as PNG" to save with the filename from "face_path"</li>
-            </ol>
-            <p>Note: The saved image will have the same name as specified in "face_path" but with .png extension</p>
-        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
@@ -374,20 +357,6 @@
                 // Show image section
                 imageSection.style.display = 'block';
             }
-
-            // Generate cropped image preview
-            cropButton.addEventListener('click', function() {
-                if (!cropper || !currentData) return;
-
-                const croppedCanvas = cropper.getCroppedCanvas({
-                    width: currentData.output_size[0],
-                    height: currentData.output_size[1]
-                });
-
-                croppedOutput.src = croppedCanvas.toDataURL('image/png');
-                croppedOutput.style.display = 'block';
-                croppedOutput.scrollIntoView({ behavior: 'smooth' });
-            });
 
             // Save cropped image as PNG
             saveButton.addEventListener('click', function() {
