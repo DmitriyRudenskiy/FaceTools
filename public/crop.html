@@ -3,6 +3,7 @@
 <head>
     <title>Image Cropper Gallery with Save Functionality</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         .container {
             max-width: 1000px;
@@ -10,6 +11,21 @@
             padding: 20px;
             font-family: Arial, sans-serif;
         }
+
+        /* Добавляем CSS Grid для двух колонок */
+        .columns-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        @media (max-width: 768px) {
+            .columns-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .config-section {
             margin-bottom: 25px;
             padding: 15px;
@@ -17,6 +33,14 @@
             border-radius: 4px;
             background: #f8f9fa;
         }
+
+        .gallery-container, .image-container {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+
         textarea {
             width: 100%;
             height: 200px;
@@ -51,7 +75,6 @@
             background: #F57C00;
         }
         .gallery-container {
-            margin: 25px 0;
             display: none;
         }
         .gallery-title {
@@ -81,21 +104,16 @@
             border-color: #4CAF50;
             transform: scale(1.05);
         }
+        .gallery-item.cropped {
+            border-color: #FF9800;
+        }
         .image-container {
             display: none;
-            margin-top: 20px;
         }
         #cropper-image {
             max-width: 100%;
             display: block;
             margin: 0 auto;
-        }
-        #cropped-output {
-            display: none;
-            width: 186px;
-            height: 186px;
-            margin: 20px auto;
-            border: 1px solid #ddd;
         }
         .note {
             padding: 12px;
@@ -107,6 +125,14 @@
         .error {
             color: #f44336;
             margin-top: 10px;
+            display: none;
+        }
+        .success {
+            color: #4CAF50;
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 4px;
             display: none;
         }
         .config-info {
@@ -125,6 +151,25 @@
             border-radius: 4px;
             margin: 15px 0;
             font-size: 14px;
+        }
+        .image-info {
+            margin: 15px 0;
+            padding: 15px;
+            background: #fff3e0;
+            border-radius: 4px;
+            border: 1px solid #ffcc02;
+        }
+        .image-info h4 {
+            margin: 0 0 10px 0;
+            color: #e65100;
+        }
+        .image-info p {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        .crop-button-container {
+            text-align: center;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -191,29 +236,45 @@
             <button id="reset" class="btn btn-secondary">Reset</button>
         </div>
 
-        <div class="gallery-container" id="gallery-container">
-            <h2>2. Select Face</h2>
-            <div class="gallery-title">Click on a thumbnail to select the face to crop:</div>
-            <div class="gallery" id="gallery"></div>
+        <!-- Контейнер для двух колонок -->
+        <div class="columns-container">
+            <!-- Левая колонка: блок 3. Edit and Save Cropped Image -->
+            <div class="image-container" id="image-section">
+               <div class="success" id="crop-success">✓ Изображение успешно сохранено!</div>
+
+                <!-- Информационная панель о текущем изображении -->
+                <div class="image-info" id="image-info" style="display: none;">
+                    <h4>Информация о изображении</h4>
+                    <p><strong>Размер вывода:</strong> <span id="output-size">-</span></p>
+                    <p><strong>Текущее изображение:</strong> <span id="current-face">-</span></p>
+                </div>
+
+                <div class="crop-button-container">
+                    <button id="cropButton" class="btn btn-primary">Кадрировать и сохранить</button>
+                </div>
+
+                <div style="text-align: center;">
+                    <img id="cropper-image" src="" alt="Original image">
+                </div>
+            </div>
+
+            <!-- Правая колонка: блок 2. Select Face -->
+            <div class="gallery-container" id="gallery-container">
+                <div class="gallery-title">Доступные изображения для кадрирования</div>
+                <div class="gallery" id="gallery"></div>
+            </div>
         </div>
 
-        <div class="image-container" id="image-section">
-            <h2>3. Edit and Save Cropped Image</h2>
-            <div class="config-info">
-                <p>Current face: <span id="current-face">1 of 2</span></p>
-                <p>Output size: <strong id="output-size">610×610 px</strong></p>
-                <p>Tip: Drag to reposition or resize the crop area while maintaining square proportions</p>
-            </div>
-
-            <div style="text-align: center;">
-                <img id="cropper-image" src="" alt="Original image">
-            </div>
-
-            <div style="text-align: center; margin-top: 15px;">
-                <button id="save-button" class="btn btn-save">Save Cropped Image as PNG</button>
-            </div>
+        <div class="instructions">
+            <strong>Инструкция по использованию:</strong>
+            <ol>
+                <li>Вставьте JSON конфигурацию в текстовое поле выше</li>
+                <li>Нажмите "Load Configuration" для загрузки</li>
+                <li>Выберите изображение из галереи справа</li>
+                <li>Настройте область кадрирования на изображении слева</li>
+                <li>Нажмите "Кадрировать и сохранить" для сохранения</li>
+            </ol>
         </div>
-
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
@@ -222,21 +283,87 @@
             const jsonConfig = document.getElementById('json-config');
             const loadConfigBtn = document.getElementById('load-config');
             const resetBtn = document.getElementById('reset');
-            const cropButton = document.getElementById('crop-button');
-            const saveButton = document.getElementById('save-button');
             const imageSection = document.getElementById('image-section');
             const galleryContainer = document.getElementById('gallery-container');
             const gallery = document.getElementById('gallery');
             const cropperImage = document.getElementById('cropper-image');
-            const croppedOutput = document.getElementById('cropped-output');
             const jsonError = document.getElementById('json-error');
             const outputSize = document.getElementById('output-size');
             const currentFace = document.getElementById('current-face');
+            const cropButton = document.getElementById('cropButton');
+            const cropSuccess = document.getElementById('crop-success');
+            const imageInfo = document.getElementById('image-info');
 
+            // Объявляем переменные cropper и данные ПЕРЕД добавлением обработчиков событий
             let cropper = null;
             let currentData = null;
             let currentConfigurations = null;
             let currentIndex = 0;
+
+            // Обработчик кнопки "Кадрировать" - ПОСЛЕ объявления переменных
+            cropButton.addEventListener('click', function () {
+                // Проверяем, что cropper инициализирован
+                if (!cropper) {
+                    console.error('Cropper не инициализирован');
+                    alert('Ошибка: cropper не инициализирован. Пожалуйста, загрузите изображение.');
+                    return;
+                }
+
+                console.log(cropper);
+
+                const croppedCanvas = cropper.getCroppedCanvas();
+
+                console.log(croppedCanvas);
+
+                if (croppedCanvas) {
+                    // Сохраняем кадрированное изображение без изменения размера
+                    croppedCanvas.toBlob(function (blob) {
+                        if (!blob) {
+                            console.error('Не удалось создать blob');
+                            alert('Ошибка при создании изображения');
+                            return;
+                        }
+
+                        const reader = new FileReader();
+                        reader.onload = function () {
+                            const arrayBuffer = reader.result;
+                            const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+                            const md5Hash = CryptoJS.MD5(wordArray).toString();
+                            const fileName = `${md5Hash}.jpg`;
+
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = fileName;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+
+                            // Показываем сообщение об успехе
+                            cropSuccess.style.display = 'block';
+                            setTimeout(() => {
+                                cropSuccess.style.display = 'none';
+                            }, 3000);
+
+                            // Добавляем отметку о кадрировании для активного элемента галереи
+                            const activeItem = document.querySelector('.gallery-item.active');
+                            if (activeItem) {
+                                activeItem.classList.add('cropped');
+                                activeItem.title = 'Кадрировано';
+                            }
+
+                            console.log('Изображение успешно сохранено:', fileName);
+                        };
+                        reader.onerror = function() {
+                            console.error('Ошибка чтения файла');
+                            alert('Ошибка при чтении файла');
+                        };
+                        reader.readAsArrayBuffer(blob);
+                    }, 'image/jpeg', 0.95);
+                } else {
+                    console.error('Не удалось получить croppedCanvas');
+                    alert('Ошибка: не удалось получить кадрированное изображение');
+                }
+            });
 
             // Helper function to extract filename from path
             function getFileNameFromPath(path) {
@@ -271,6 +398,7 @@
                     loadSelectedItem();
 
                     jsonError.style.display = 'none';
+                    cropSuccess.style.display = 'none';
 
                 } catch (e) {
                     jsonError.textContent = `Invalid JSON configuration: ${e.message}`;
@@ -305,6 +433,7 @@
                         // Load selected item
                         currentIndex = parseInt(this.dataset.index);
                         loadSelectedItem();
+                        cropSuccess.style.display = 'none';
                     });
 
                     gallery.appendChild(thumbnail);
@@ -325,6 +454,9 @@
                 // Update UI labels
                 outputSize.textContent = `${config.output_size[0]}×${config.output_size[1]} px`;
                 currentFace.textContent = `${currentIndex + 1} of ${currentConfigurations.length}`;
+
+                // Show image info
+                imageInfo.style.display = 'block';
 
                 // Update image source
                 cropperImage.src = config.image_path;
@@ -357,30 +489,6 @@
                 // Show image section
                 imageSection.style.display = 'block';
             }
-
-            // Save cropped image as PNG
-            saveButton.addEventListener('click', function() {
-                if (!cropper || !currentData) return;
-
-                const canvas = cropper.getCroppedCanvas({
-                    width: currentData.output_size[0],
-                    height: currentData.output_size[1]
-                });
-
-                // Get filename from face_path and change extension to .png
-                const fileName = getFileNameFromPath(currentData.face_path) + '.png';
-
-                // Create download link
-                const link = document.createElement('a');
-                link.download = fileName;
-                link.href = canvas.toDataURL('image/png');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                // Show confirmation
-                alert(`Image saved as ${fileName}\nNote: In real browsers, this will trigger a download dialog`);
-            });
 
             // Reset the interface
             resetBtn.addEventListener('click', function() {
@@ -443,8 +551,9 @@
                 }
                 imageSection.style.display = 'none';
                 galleryContainer.style.display = 'none';
-                croppedOutput.style.display = 'none';
                 jsonError.style.display = 'none';
+                cropSuccess.style.display = 'none';
+                imageInfo.style.display = 'none';
                 currentConfigurations = null;
                 currentIndex = 0;
             });
