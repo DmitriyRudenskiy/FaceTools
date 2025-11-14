@@ -1,10 +1,12 @@
 import time
 from typing import List, Dict, Any, Optional
 import numpy as np
+import os
 
 # Исправленный импорт класса Cluster
 from src.domain.cluster import Cluster, ClusteringResult
 from src.core.interfaces.clusterer import Clusterer
+from sklearn.metrics import silhouette_score
 
 
 class ImageGrouper:

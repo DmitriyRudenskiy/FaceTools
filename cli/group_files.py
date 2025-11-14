@@ -24,14 +24,17 @@ def _organize_files(clusters, destination_directory):
 
     for cluster in clusters:
         # Используем имя файла представителя (без расширения) как имя каталога
-        representative_name = os.path.splitext(cluster.representative)[0]
+        file_name = os.path.basename(cluster.representative)
+        representative_name = os.path.splitext(file_name)[0]
+
         # Очищаем имя от недопустимых символов для имен файлов/каталогов
         safe_group_name = "".join(c for c in representative_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
         # Если имя оказалось пустым, используем ID группы
         if not safe_group_name:
             safe_group_name = f"Group_{cluster.id}"
+
         group_directory_path = os.path.join(destination_directory, safe_group_name)
-        print(f"Создаю каталог для группы {cluster.id}: {group_directory_path}")
+
         # Создаем каталог для группы
         try:
             os.makedirs(group_directory_path, exist_ok=True)
@@ -51,7 +54,8 @@ def _organize_files(clusters, destination_directory):
                 total_copied += 1
             except Exception as e:
                 print(f"Ошибка копирования файла {full_path} в {group_directory_path}: {e}")
-        print(f"  Скопировано файлов в группу '{safe_group_name}': {copied_count}")
+
+        print(f"Группа {cluster.id}: {group_directory_path}, файлов: {copied_count}")
 
     print(f"=== Организация файлов завершена ===")
 
