@@ -66,7 +66,8 @@ def main() -> None:
                     "bbox_original": [int(x) for x in bbox],
                     "bbox_cropped": [crop_x1, crop_y1, crop_x2, crop_y2],
                     "image_size": [img_width, img_height],
-                    "output_size": [side_length, side_length]
+                    "output_size": [side_length, side_length],
+                    "face_path": str(output_path.resolve())
                 }
                 all_faces_data.append(face_data)
 

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Cropper Gallery with Save Functionality</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .config-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            font-family: monospace;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2196F3;
+        }
+        .btn-secondary:hover {
+            background: #0b7dda;
+        }
+        .btn-save {
+            background: #FF9800;
+        }
+        .btn-save:hover {
+            background: #F57C00;
+        }
+        .gallery-container {
+            margin: 25px 0;
+            display: none;
+        }
+        .gallery-title {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            min-height: 100px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .gallery-item {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .gallery-item.active {
+            border-color: #4CAF50;
+            transform: scale(1.05);
+        }
+        .image-container {
+            display: none;
+            margin-top: 20px;
+        }
+        #cropper-image {
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+        #cropped-output {
+            display: none;
+            width: 186px;
+            height: 186px;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+        }
+        .note {
+            padding: 12px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .error {
+            color: #f44336;
+            margin-top: 10px;
+            display: none;
+        }
+        .config-info {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f1f8e9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .config-info p {
+            margin: 5px 0;
+        }
+        .instructions {
+            background: #e8f5e9;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Cropper Gallery with Save Functionality</h1>
+
+        <div class="config-section">
+            <h2>1. Enter JSON Configuration</h2>
+            <textarea id="json-config" placeholder="Paste your JSON array here...">[
+  {
+    "image_path": "/Users/user/Downloads/_person_Arianna A/826ae7a3c633e8fedc44044aa6167516.jpg",
+    "face_index": 0,
+    "bbox_original": [
+      1535,
+      622,
+      1835,
+      981
+    ],
+    "bbox_cropped": [
+      1380,
+      497,
+      1990,
+      1107
+    ],
+    "image_size": [
+      2832,
+      4256
+    ],
+    "output_size": [
+      610,
+      610
+    ],
+    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/826ae7a3c633e8fedc44044aa6167516_face_1.jpg"
+  },
+  {
+    "image_path": "/Users/user/Downloads/_person_Arianna A/a8e69e7c82cd8b40b8d685b1c61ec8d7.jpg",
+    "face_index": 0,
+    "bbox_original": [
+      1564,
+      325,
+      1896,
+      723
+    ],
+    "bbox_cropped": [
+      1392,
+      186,
+      2068,
+      862
+    ],
+    "image_size": [
+      2662,
+      4000
+    ],
+    "output_size": [
+      676,
+      676
+    ],
+    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/a8e69e7c82cd8b40b8d685b1c61ec8d7_face_1.jpg"
+  }
+]</textarea>
+            <div class="error" id="json-error"></div>
+            <button id="load-config" class="btn">Load Configuration</button>
+            <button id="reset" class="btn btn-secondary">Reset</button>
+        </div>
+
+        <div class="gallery-container" id="gallery-container">
+            <h2>2. Select Face</h2>
+            <div class="gallery-title">Click on a thumbnail to select the face to crop:</div>
+            <div class="gallery" id="gallery"></div>
+        </div>
+
+        <div class="image-container" id="image-section">
+            <h2>3. Edit and Save Cropped Image</h2>
+            <div class="config-info">
+                <p>Current face: <span id="current-face">1 of 2</span></p>
+                <p>Output size: <strong id="output-size">610×610 px</strong></p>
+                <p>Tip: Drag to reposition or resize the crop area while maintaining square proportions</p>
+            </div>
+
+            <div style="text-align: center;">
+                <img id="cropper-image" src="" alt="Original image">
+                <div class="note">
+                    <strong>Important:</strong> The image path in your JSON is local. For web use, replace with a web-accessible URL.
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <button id="crop-button" class="btn">Preview Cropped Image</button>
+                <button id="save-button" class="btn btn-save">Save Cropped Image as PNG</button>
+            </div>
+
+            <img id="cropped-output" alt="Cropped result">
+        </div>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Enter or paste your JSON configuration containing multiple face entries</li>
+                <li>Select a face from the gallery to edit</li>
+                <li>Adjust the crop area by dragging the square selection box</li>
+                <li>Click "Preview Cropped Image" to see the result</li>
+                <li>Click "Save Cropped Image as PNG" to save with the filename from "face_path"</li>
+            </ol>
+            <p>Note: The saved image will have the same name as specified in "face_path" but with .png extension</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const jsonConfig = document.getElementById('json-config');
+            const loadConfigBtn = document.getElementById('load-config');
+            const resetBtn = document.getElementById('reset');
+            const cropButton = document.getElementById('crop-button');
+            const saveButton = document.getElementById('save-button');
+            const imageSection = document.getElementById('image-section');
+            const galleryContainer = document.getElementById('gallery-container');
+            const gallery = document.getElementById('gallery');
+            const cropperImage = document.getElementById('cropper-image');
+            const croppedOutput = document.getElementById('cropped-output');
+            const jsonError = document.getElementById('json-error');
+            const outputSize = document.getElementById('output-size');
+            const currentFace = document.getElementById('current-face');
+
+            let cropper = null;
+            let currentData = null;
+            let currentConfigurations = null;
+            let currentIndex = 0;
+
+            // Helper function to extract filename from path
+            function getFileNameFromPath(path) {
+                return path.split('/').pop().replace(/\.[^/.]+$/, '');
+            }
+
+            // Load configuration from JSON
+            loadConfigBtn.addEventListener('click', function() {
+                try {
+                    const config = JSON.parse(jsonConfig.value);
+
+                    // Validate input
+                    if (!Array.isArray(config) || config.length === 0) {
+                        throw new Error("JSON must be a non-empty array");
+                    }
+
+                    // Check required fields
+                    const requiredFields = ['image_path', 'bbox_cropped', 'output_size', 'face_path'];
+                    config.forEach((item, index) => {
+                        const missingFields = requiredFields.filter(field => !(field in item));
+                        if (missingFields.length > 0) {
+                            throw new Error(`Item ${index + 1}: Missing required fields: ${missingFields.join(', ')}`);
+                        }
+                    });
+
+                    // Store configurations
+                    currentConfigurations = config;
+                    currentIndex = 0;
+
+                    // Update UI
+                    updateGallery();
+                    loadSelectedItem();
+
+                    jsonError.style.display = 'none';
+
+                } catch (e) {
+                    jsonError.textContent = `Invalid JSON configuration: ${e.message}`;
+                    jsonError.style.display = 'block';
+                    imageSection.style.display = 'none';
+                    galleryContainer.style.display = 'none';
+                }
+            });
+
+            // Update gallery thumbnails
+            function updateGallery() {
+                gallery.innerHTML = '';
+
+                currentConfigurations.forEach((item, index) => {
+                    const thumbnail = document.createElement('img');
+                    thumbnail.className = 'gallery-item';
+                    thumbnail.src = item.face_path;
+                    thumbnail.dataset.index = index;
+
+                    // Add active class to current item
+                    if (index === currentIndex) {
+                        thumbnail.classList.add('active');
+                    }
+
+                    thumbnail.addEventListener('click', function() {
+                        // Update active state
+                        document.querySelectorAll('.gallery-item').forEach(el => {
+                            el.classList.remove('active');
+                        });
+                        this.classList.add('active');
+
+                        // Load selected item
+                        currentIndex = parseInt(this.dataset.index);
+                        loadSelectedItem();
+                    });
+
+                    gallery.appendChild(thumbnail);
+                });
+
+                galleryContainer.style.display = 'block';
+            }
+
+            // Load selected configuration
+            function loadSelectedItem() {
+                if (!currentConfigurations || currentIndex >= currentConfigurations.length) {
+                    return;
+                }
+
+                const config = currentConfigurations[currentIndex];
+                currentData = config;
+
+                // Update UI labels
+                outputSize.textContent = `${config.output_size[0]}×${config.output_size[1]} px`;
+                currentFace.textContent = `${currentIndex + 1} of ${currentConfigurations.length}`;
+
+                // Update image source
+                cropperImage.src = config.image_path;
+
+                // Initialize or reinitialize cropper
+                if (cropper) {
+                    cropper.destroy();
+                }
+
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1, // Enforce square aspect ratio
+                    viewMode: 1,
+                    dragMode: 'crop', // Allow moving and resizing the crop box
+                    autoCrop: true,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    ready: function() {
+                        // Set initial crop position
+                        const width = config.bbox_cropped[2] - config.bbox_cropped[0];
+                        const height = config.bbox_cropped[3] - config.bbox_cropped[1];
+                        cropper.setData({
+                            x: config.bbox_cropped[0],
+                            y: config.bbox_cropped[1],
+                            width: width,
+                            height: height
+                        });
+                    }
+                });
+
+                // Show image section
+                imageSection.style.display = 'block';
+            }
+
+            // Generate cropped image preview
+            cropButton.addEventListener('click', function() {
+                if (!cropper || !currentData) return;
+
+                const croppedCanvas = cropper.getCroppedCanvas({
+                    width: currentData.output_size[0],
+                    height: currentData.output_size[1]
+                });
+
+                croppedOutput.src = croppedCanvas.toDataURL('image/png');
+                croppedOutput.style.display = 'block';
+                croppedOutput.scrollIntoView({ behavior: 'smooth' });
+            });
+
+            // Save cropped image as PNG
+            saveButton.addEventListener('click', function() {
+                if (!cropper || !currentData) return;
+
+                const canvas = cropper.getCroppedCanvas({
+                    width: currentData.output_size[0],
+                    height: currentData.output_size[1]
+                });
+
+                // Get filename from face_path and change extension to .png
+                const fileName = getFileNameFromPath(currentData.face_path) + '.png';
+
+                // Create download link
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Show confirmation
+                alert(`Image saved as ${fileName}\nNote: In real browsers, this will trigger a download dialog`);
+            });
+
+            // Reset the interface
+            resetBtn.addEventListener('click', function() {
+                jsonConfig.value = `[
+  {
+    "image_path": "/Users/user/Downloads/_person_Arianna A/826ae7a3c633e8fedc44044aa6167516.jpg",
+    "face_index": 0,
+    "bbox_original": [
+      1535,
+      622,
+      1835,
+      981
+    ],
+    "bbox_cropped": [
+      1380,
+      497,
+      1990,
+      1107
+    ],
+    "image_size": [
+      2832,
+      4256
+    ],
+    "output_size": [
+      610,
+      610
+    ],
+    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/826ae7a3c633e8fedc44044aa6167516_face_1.jpg"
+  },
+  {
+    "image_path": "/Users/user/Downloads/_person_Arianna A/a8e69e7c82cd8b40b8d685b1c61ec8d7.jpg",
+    "face_index": 0,
+    "bbox_original": [
+      1564,
+      325,
+      1896,
+      723
+    ],
+    "bbox_cropped": [
+      1392,
+      186,
+      2068,
+      862
+    ],
+    "image_size": [
+      2662,
+      4000
+    ],
+    "output_size": [
+      676,
+      676
+    ],
+    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/a8e69e7c82cd8b40b8d685b1c61ec8d7_face_1.jpg"
+  }
+]`;
+
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                imageSection.style.display = 'none';
+                galleryContainer.style.display = 'none';
+                croppedOutput.style.display = 'none';
+                jsonError.style.display = 'none';
+                currentConfigurations = null;
+                currentIndex = 0;
+            });
+
+            // Auto-load default config on page load
+            setTimeout(() => loadConfigBtn.click(), 100);
+        });
+    </script>
+</body>
+</html>
