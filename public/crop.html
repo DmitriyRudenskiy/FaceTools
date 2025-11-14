@@ -41,15 +41,38 @@
             background: #f8f9fa;
         }
 
-        textarea {
-            width: 100%;
-            height: 200px;
-            padding: 10px;
-            font-family: monospace;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            resize: vertical;
+        .directory-selector {
+            padding: 20px;
+            border: 2px dashed #4CAF50;
+            border-radius: 8px;
+            text-align: center;
+            background: #f1f8f4;
+            cursor: pointer;
+            transition: all 0.3s;
         }
+
+        .directory-selector:hover {
+            background: #e8f5e9;
+            border-color: #45a049;
+        }
+
+        .directory-selector input[type="file"] {
+            display: none;
+        }
+
+        .directory-info {
+            margin: 15px 0;
+            padding: 12px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .directory-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
         .btn {
             background: #4CAF50;
             color: white;
@@ -125,6 +148,9 @@
         .error {
             color: #f44336;
             margin-top: 10px;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 4px;
             display: none;
         }
         .success {
@@ -171,6 +197,10 @@
             text-align: center;
             margin: 20px 0;
         }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -178,62 +208,21 @@
         <h1>Image Cropper Gallery with Save Functionality</h1>
 
         <div class="config-section">
-            <h2>1. Enter JSON Configuration</h2>
-            <textarea id="json-config" placeholder="Paste your JSON array here...">[
-  {
-    "image_path": "/Users/user/Downloads/_person_Arianna A/826ae7a3c633e8fedc44044aa6167516.jpg",
-    "face_index": 0,
-    "bbox_original": [
-      1535,
-      622,
-      1835,
-      981
-    ],
-    "bbox_cropped": [
-      1380,
-      497,
-      1990,
-      1107
-    ],
-    "image_size": [
-      2832,
-      4256
-    ],
-    "output_size": [
-      610,
-      610
-    ],
-    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/826ae7a3c633e8fedc44044aa6167516_face_1.jpg"
-  },
-  {
-    "image_path": "/Users/user/Downloads/_person_Arianna A/a8e69e7c82cd8b40b8d685b1c61ec8d7.jpg",
-    "face_index": 0,
-    "bbox_original": [
-      1564,
-      325,
-      1896,
-      723
-    ],
-    "bbox_cropped": [
-      1392,
-      186,
-      2068,
-      862
-    ],
-    "image_size": [
-      2662,
-      4000
-    ],
-    "output_size": [
-      676,
-      676
-    ],
-    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/a8e69e7c82cd8b40b8d685b1c61ec8d7_face_1.jpg"
-  }
-]</textarea>
-            <div class="error" id="json-error"></div>
-            <button id="load-config" class="btn">Load Configuration</button>
-            <button id="reset" class="btn btn-secondary">Reset</button>
+            <h2>1. Выберите директорию с изображениями</h2>
+            <div class="directory-selector" onclick="document.getElementById('directory-input').click()">
+                <div class="icon">📁</div>
+                <p><strong>Нажмите для выбора директории</strong></p>
+                <p style="font-size: 12px; color: #666;">Директория должна содержать изображения и файл faces_coordinates.json с путями к миниатюрам</p>
+                <input type="file" id="directory-input" webkitdirectory directory multiple>
+            </div>
+            <div class="directory-info" id="directory-info" style="display: none;">
+                <p><strong>Выбранная директория:</strong> <span id="selected-path">-</span></p>
+                <p><strong>Найдено изображений:</strong> <span id="images-count">-</span></p>
+                <p><strong>Файл конфигурации:</strong> <span id="config-status">-</span></p>
+            </div>
+            <div class="error" id="directory-error"></div>
+            <div class="success" id="directory-success"></div>
+            <button id="reset" class="btn btn-secondary">Сбросить</button>
         </div>
 
         <!-- Контейнер для двух колонок -->
@@ -259,7 +248,7 @@
             </div>
 
             <!-- Правая колонка: блок 2. Select Face -->
-            <div class="gallery-container" id="gallery-container">
+            <div class="gallery-container" id="gallery-container" >
                 <div class="gallery-title">Доступные изображения для кадрирования</div>
                 <div class="gallery" id="gallery"></div>
             </div>
@@ -268,8 +257,8 @@
         <div class="instructions">
             <strong>Инструкция по использованию:</strong>
             <ol>
-                <li>Вставьте JSON конфигурацию в текстовое поле выше</li>
-                <li>Нажмите "Load Configuration" для загрузки</li>
+                <li>Выберите директорию с изображениями и файлом faces_coordinates.json</li>
+                <li>Система автоматически загрузит конфигурацию с путями к миниатюрам из JSON</li>
                 <li>Выберите изображение из галереи справа</li>
                 <li>Настройте область кадрирования на изображении слева</li>
                 <li>Нажмите "Кадрировать и сохранить" для сохранения</li>
@@ -280,43 +269,136 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const jsonConfig = document.getElementById('json-config');
-            const loadConfigBtn = document.getElementById('load-config');
+            const directoryInput = document.getElementById('directory-input');
             const resetBtn = document.getElementById('reset');
             const imageSection = document.getElementById('image-section');
             const galleryContainer = document.getElementById('gallery-container');
             const gallery = document.getElementById('gallery');
             const cropperImage = document.getElementById('cropper-image');
-            const jsonError = document.getElementById('json-error');
+            const directoryError = document.getElementById('directory-error');
+            const directorySuccess = document.getElementById('directory-success');
+            const directoryInfo = document.getElementById('directory-info');
+            const selectedPath = document.getElementById('selected-path');
+            const imagesCount = document.getElementById('images-count');
+            const configStatus = document.getElementById('config-status');
             const outputSize = document.getElementById('output-size');
             const currentFace = document.getElementById('current-face');
             const cropButton = document.getElementById('cropButton');
             const cropSuccess = document.getElementById('crop-success');
             const imageInfo = document.getElementById('image-info');
 
-            // Объявляем переменные cropper и данные ПЕРЕД добавлением обработчиков событий
+            // Объявляем переменные cropper и данные
             let cropper = null;
             let currentData = null;
             let currentConfigurations = null;
             let currentIndex = 0;
+            let filesMap = new Map(); // Для хранения файлов из директории
 
-            // Обработчик кнопки "Кадрировать" - ПОСЛЕ объявления переменных
+            // Обработчик выбора директории
+            directoryInput.addEventListener('change', async function(e) {
+                const files = Array.from(e.target.files);
+
+                if (files.length === 0) {
+                    showError('Директория не выбрана');
+                    return;
+                }
+
+                // Получаем путь к директории (общая часть пути)
+                const firstFile = files[0];
+                const pathParts = firstFile.webkitRelativePath.split('/');
+                const dirName = pathParts[0];
+                selectedPath.textContent = dirName;
+
+                // Поиск файла конфигурации
+                const configFile = files.find(f => f.name === 'faces_coordinates.json');
+
+                if (!configFile) {
+                    showError('Файл faces_coordinates.json не найден в выбранной директории');
+                    configStatus.textContent = '❌ Не найден';
+                    directoryInfo.style.display = 'block';
+                    return;
+                }
+
+                configStatus.textContent = '✅ Найден';
+
+                // Создаем карту файлов для быстрого доступа
+                filesMap.clear();
+                files.forEach(file => {
+                    const fileName = file.name;
+                    filesMap.set(fileName, file);
+                });
+
+                // Подсчет всех изображений в директории
+                const imageFiles = files.filter(f => {
+                    const ext = f.name.split('.').pop().toLowerCase();
+                    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+                });
+                imagesCount.textContent = imageFiles.length;
+
+                directoryInfo.style.display = 'block';
+
+                // Чтение конфигурации
+                try {
+                    const configText = await configFile.text();
+                    const config = JSON.parse(configText);
+
+                    // Валидация
+                    if (!Array.isArray(config) || config.length === 0) {
+                        throw new Error("JSON должен быть непустым массивом");
+                    }
+
+                    const requiredFields = ['image_path', 'bbox_cropped', 'output_size', 'face_path'];
+                    config.forEach((item, index) => {
+                        const missingFields = requiredFields.filter(field => !(field in item));
+                        if (missingFields.length > 0) {
+                            throw new Error(`Элемент ${index + 1}: отсутствуют обязательные поля: ${missingFields.join(', ')}`);
+                        }
+                    });
+
+                    // Сохраняем конфигурацию
+                    currentConfigurations = config;
+                    currentIndex = 0;
+
+                    // Обновляем UI
+                    updateGallery();
+                    loadSelectedItem();
+
+                    directoryError.style.display = 'none';
+                    cropSuccess.style.display = 'none';
+                    directorySuccess.textContent = `✓ Конфигурация загружена успешно! Найдено ${config.length} изображений для кадрирования.`;
+                    directorySuccess.style.display = 'block';
+
+                } catch (e) {
+                    showError(`Ошибка загрузки конфигурации: ${e.message}`);
+                    imageSection.style.display = 'none';
+                    galleryContainer.style.display = 'none';
+                }
+            });
+
+            // Функция показа ошибки
+            function showError(message) {
+                directoryError.textContent = message;
+                directoryError.style.display = 'block';
+                directorySuccess.style.display = 'none';
+            }
+
+            // Функция получения файла по имени из пути
+            function getFileFromPath(path) {
+                const fileName = path.split('/').pop();
+                return filesMap.get(fileName);
+            }
+
+            // Обработчик кнопки "Кадрировать"
             cropButton.addEventListener('click', function () {
-                // Проверяем, что cropper инициализирован
                 if (!cropper) {
                     console.error('Cropper не инициализирован');
                     alert('Ошибка: cropper не инициализирован. Пожалуйста, загрузите изображение.');
                     return;
                 }
 
-                console.log(cropper);
-
                 const croppedCanvas = cropper.getCroppedCanvas();
 
-                console.log(croppedCanvas);
-
                 if (croppedCanvas) {
-                    // Сохраняем кадрированное изображение без изменения размера
                     croppedCanvas.toBlob(function (blob) {
                         if (!blob) {
                             console.error('Не удалось создать blob');
@@ -344,7 +426,7 @@
                                 cropSuccess.style.display = 'none';
                             }, 3000);
 
-                            // Добавляем отметку о кадрировании для активного элемента галереи
+                            // Добавляем отметку о кадрировании
                             const activeItem = document.querySelector('.gallery-item.active');
                             if (activeItem) {
                                 activeItem.classList.add('cropped');
@@ -365,57 +447,22 @@
                 }
             });
 
-            // Helper function to extract filename from path
-            function getFileNameFromPath(path) {
-                return path.split('/').pop().replace(/\.[^/.]+$/, '');
-            }
-
-            // Load configuration from JSON
-            loadConfigBtn.addEventListener('click', function() {
-                try {
-                    const config = JSON.parse(jsonConfig.value);
-
-                    // Validate input
-                    if (!Array.isArray(config) || config.length === 0) {
-                        throw new Error("JSON must be a non-empty array");
-                    }
-
-                    // Check required fields
-                    const requiredFields = ['image_path', 'bbox_cropped', 'output_size', 'face_path'];
-                    config.forEach((item, index) => {
-                        const missingFields = requiredFields.filter(field => !(field in item));
-                        if (missingFields.length > 0) {
-                            throw new Error(`Item ${index + 1}: Missing required fields: ${missingFields.join(', ')}`);
-                        }
-                    });
-
-                    // Store configurations
-                    currentConfigurations = config;
-                    currentIndex = 0;
-
-                    // Update UI
-                    updateGallery();
-                    loadSelectedItem();
-
-                    jsonError.style.display = 'none';
-                    cropSuccess.style.display = 'none';
-
-                } catch (e) {
-                    jsonError.textContent = `Invalid JSON configuration: ${e.message}`;
-                    jsonError.style.display = 'block';
-                    imageSection.style.display = 'none';
-                    galleryContainer.style.display = 'none';
-                }
-            });
-
-            // Update gallery thumbnails
+            // Обновление галереи
             function updateGallery() {
                 gallery.innerHTML = '';
 
                 currentConfigurations.forEach((item, index) => {
                     const thumbnail = document.createElement('img');
                     thumbnail.className = 'gallery-item';
-                    thumbnail.src = item.face_path;
+
+                    // Получаем файл миниатюры
+                    const faceFile = getFileFromPath(item.face_path);
+                    if (faceFile) {
+                        thumbnail.src = URL.createObjectURL(faceFile);
+                    } else {
+                        console.warn(`Face file not found: ${item.face_path}`);
+                    }
+
                     thumbnail.dataset.index = index;
 
                     // Add active class to current item
@@ -442,7 +489,7 @@
                 galleryContainer.style.display = 'block';
             }
 
-            // Load selected configuration
+            // Загрузка выбранного элемента
             function loadSelectedItem() {
                 if (!currentConfigurations || currentIndex >= currentConfigurations.length) {
                     return;
@@ -453,13 +500,21 @@
 
                 // Update UI labels
                 outputSize.textContent = `${config.output_size[0]}×${config.output_size[1]} px`;
-                currentFace.textContent = `${currentIndex + 1} of ${currentConfigurations.length}`;
+                currentFace.textContent = `${currentIndex + 1} из ${currentConfigurations.length}`;
 
                 // Show image info
                 imageInfo.style.display = 'block';
 
+                // Получаем файл оригинального изображения
+                const imageFile = getFileFromPath(config.image_path);
+                if (!imageFile) {
+                    console.error(`Image file not found: ${config.image_path}`);
+                    alert(`Изображение не найдено: ${config.image_path}`);
+                    return;
+                }
+
                 // Update image source
-                cropperImage.src = config.image_path;
+                cropperImage.src = URL.createObjectURL(imageFile);
 
                 // Initialize or reinitialize cropper
                 if (cropper) {
@@ -469,7 +524,7 @@
                 cropper = new Cropper(cropperImage, {
                     aspectRatio: 1, // Enforce square aspect ratio
                     viewMode: 1,
-                    dragMode: 'crop', // Allow moving and resizing the crop box
+                    dragMode: 'crop',
                     autoCrop: true,
                     cropBoxMovable: true,
                     cropBoxResizable: true,
@@ -490,76 +545,27 @@
                 imageSection.style.display = 'block';
             }
 
-            // Reset the interface
+            // Сброс
             resetBtn.addEventListener('click', function() {
-                jsonConfig.value = `[
-  {
-    "image_path": "/Users/user/Downloads/_person_Arianna A/826ae7a3c633e8fedc44044aa6167516.jpg",
-    "face_index": 0,
-    "bbox_original": [
-      1535,
-      622,
-      1835,
-      981
-    ],
-    "bbox_cropped": [
-      1380,
-      497,
-      1990,
-      1107
-    ],
-    "image_size": [
-      2832,
-      4256
-    ],
-    "output_size": [
-      610,
-      610
-    ],
-    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/826ae7a3c633e8fedc44044aa6167516_face_1.jpg"
-  },
-  {
-    "image_path": "/Users/user/Downloads/_person_Arianna A/a8e69e7c82cd8b40b8d685b1c61ec8d7.jpg",
-    "face_index": 0,
-    "bbox_original": [
-      1564,
-      325,
-      1896,
-      723
-    ],
-    "bbox_cropped": [
-      1392,
-      186,
-      2068,
-      862
-    ],
-    "image_size": [
-      2662,
-      4000
-    ],
-    "output_size": [
-      676,
-      676
-    ],
-    "face_path": "/Users/user/Downloads/_person_Arianna A/faces/a8e69e7c82cd8b40b8d685b1c61ec8d7_face_1.jpg"
-  }
-]`;
+                directoryInput.value = '';
+                filesMap.clear();
 
                 if (cropper) {
                     cropper.destroy();
                     cropper = null;
                 }
+
                 imageSection.style.display = 'none';
                 galleryContainer.style.display = 'none';
-                jsonError.style.display = 'none';
+                directoryError.style.display = 'none';
+                directorySuccess.style.display = 'none';
                 cropSuccess.style.display = 'none';
                 imageInfo.style.display = 'none';
+                directoryInfo.style.display = 'none';
                 currentConfigurations = null;
                 currentIndex = 0;
+                gallery.innerHTML = '';
             });
-
-            // Auto-load default config on page load
-            setTimeout(() => loadConfigBtn.click(), 100);
         });
     </script>
 </body>
