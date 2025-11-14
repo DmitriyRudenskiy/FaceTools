@@ -183,9 +183,14 @@
                 imageList.innerHTML = '';
 
                 images.forEach((file, index) => {
+                    // Формируем original_name
+                    const fileName = file.name;
+                    const originalName = fileName.replace(/_face_\d+/, '');
+
                     const img = document.createElement('img');
+                    img.setAttribute('original_name', originalName);
+
                     img.onload = function() {
-                        console.log(img.src);
                         URL.revokeObjectURL(file);
 
                         const container = document.createElement('div');
@@ -286,7 +291,7 @@
 
             function updateFaceCountBadge(imageIndex) {
                 const count = allFacesData.filter(face =>
-                    face.image_path === images[imageIndex].name
+                    face.image_path === images[imageIndex].webkitRelativePath
                 ).length;
 
                 const containers = imageList.querySelectorAll('.thumbnail-container');
@@ -311,9 +316,14 @@
                     const crop_x2 = Math.round(cropData.x + cropData.width);
                     const crop_y2 = Math.round(cropData.y + cropData.height);
 
+                    // Формируем original_name из имени файла
+                    const fileName = currentImageFile.name;
+                    const originalName = fileName.replace(/_face_\d+/, '');
+
                     // Сохраняем данные о кадрировании
                     const faceData = {
-                        image_path: currentImageFile.name,
+                        image_path: currentImageFile.webkitRelativePath, // Абсолютный путь относительно корня директории
+                        original_name: originalName, // Новый атрибут по заданию
                         face_index: faceCount++,
                         bbox_original: [crop_x1, crop_y1, crop_x2, crop_y2],
                         bbox_cropped: [crop_x1, crop_y1, crop_x2, crop_y2],
