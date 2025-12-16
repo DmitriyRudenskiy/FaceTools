@@ -6,6 +6,9 @@ ffmpeg -i 'video.mp4'  -q:v 2 frame_%05d.jpg
 # Вырезаем все лица из кадров
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.7
 
+# Копирование уникальных
+python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.9
+
 # Группируем лица по схожести
 python /Users/user/PycharmProjects/FaceTools/cli/make_matrix.py -s './faces' -o matrix
 
