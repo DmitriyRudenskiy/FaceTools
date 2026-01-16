@@ -15,6 +15,7 @@ from src.infrastructure.clustering.image_grouper import ImageGrouper
 # pylint: enable=import-error,wrong-import-position
 
 from src.infrastructure.clustering.hierarchical_clusterer import HierarchicalClusterer
+from src.infrastructure.clustering.atcc_clusterer import ATCCClusterer
 
 
 def _organize_files(clusters, destination_directory):
@@ -119,7 +120,7 @@ def main():
 
     """Группирует изображения по схожести лиц."""
     # Создаем кластеризатор с параметрами
-    clusterer = HierarchicalClusterer(min_cluster_size=2, linkage_method='average', inconsistency_threshold=0.6)
+    clusterer = HierarchicalClusterer(min_cluster_size=2, linkage_method='average', inconsistency_threshold=0.5)
     grouper = ImageGrouper(
         matrix_instance.matrix,
         matrix_instance.legend,

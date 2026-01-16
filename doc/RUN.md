@@ -1,16 +1,17 @@
 # переходим в директорию
 
 # Разбиваем видео на кадры
-ffmpeg -i 'video.mp4'  -q:v 2 frame_%05d.jpg
+
+ffmpeg -i *.mp4 frame_%05d.png
 
 # Вырезаем все лица из кадров
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.7
 
 # Копирование уникальных
-python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.9
+python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.75
 
 # Группируем лица по схожести
-python /Users/user/PycharmProjects/FaceTools/cli/make_matrix.py -s './faces' -o matrix
+python /Users/user/PycharmProjects/FaceTools/cli/make_matrix.py -s ./unique_faces  -o matrix
 
 # С указанием порога
 python /Users/user/PycharmProjects/FaceTools/cli/group_files.py -j matrix.json -o groups.json -d groups
@@ -34,3 +35,5 @@ python /Users/user/PycharmProjects/FaceTools/cli/collage.py -s /Users/user/Downl
    - Случайное перемешивание изображений перед созданием коллажей
    - Сохранение результатов в указанную директорию
 
+# sam3
+python /Users/user/PycharmProjects/FaceTools/cli/crop_head_square.py /Users/user/Downloads/5e0be7afa016ea69e9be6e5815dfe28b.jpg --pad 70

@@ -111,12 +111,13 @@ def main():
                 matrix.set_value(i, j, 1.0)
             else:
                 result = comparator.storage.compare_by_index(i, j)
-                print(f"{i} | {j}  | {result:.4f}")
+                # print(f"{i} | {j}  | {result:.4f}") # Можно закомментировать для чистоты лога
                 matrix.set_value(i, j, result)
                 matrix.set_value(j, i, result)
 
-    # Сохраняем матрицу схожести
-    matrix.to_json(args.json)
+    # === ИСПРАВЛЕНИЕ ===
+    # Не сохраняем JSON здесь, так как пути к файлам еще изменятся (перемещение)
+    # matrix.to_json(args.json)
 
     # === Используем параметр out ===
     out_dir = Path(args.out).resolve()
@@ -130,23 +131,36 @@ def main():
 
     for idx, src_path in enumerate(load_image_paths):
         src_path = Path(src_path).resolve()
+
+        # Важно: проверяем существование файла перед перемещением
         if not src_path.exists():
-            print(f"  ✗ Файл {src_path.name} не существует, пропускаем")
+            print(f"  ✗ Файл {src_path.name} не существует (возможно, уже был перемещен), пропускаем")
             continue
 
         # Проверяем, находится ли файл уже в целевой директории
+        # Сравниваем объекты Path
         if src_path.parent == out_dir:
             print(f"  → {src_path.name} уже находится в целевой директории, пропускаем")
             skipped_count += 1
             continue
 
         file_ext = src_path.suffix
+        # Формируем имя на основе индекса, как в оригинале
         dest_path = out_dir / f"{idx}{file_ext}"
 
         try:
             shutil.move(str(src_path), str(dest_path))
             print(f"  ✓ {src_path.name} -> {dest_path.name} (index: {idx})")
             moved_count += 1
+
+            # === КРИТИЧНОЕ ИСПРАВЛЕНИЕ ===
+            # Обновляем путь в матрице, чтобы он указывал на новое расположение файла
+            # matrix.legend - это список путей, который используется при сохранении JSON
+            if hasattr(matrix, 'legend'):
+                matrix.legend[idx] = str(dest_path.resolve())
+            elif hasattr(matrix, '_legend'):  # Если атрибут приватный
+                matrix._legend[idx] = str(dest_path.resolve())
+
         except Exception as e:
             print(f"  ✗ Ошибка при перемещении {src_path.name}: {str(e)}")
 
@@ -156,6 +170,17 @@ def main():
 
     print(f"Успешно перемещено {moved_count} изображений в папку {out_dir}")
     print(f"Всего обработано: {num_images} изображений")
+
+    # === ИСПРАВЛЕНИЕ ===
+    # Сохраняем матрицу ПОСЛЕ перемещения файлов и обновления путей в ней.
+    print(f"\nСохранение матрицы в {args.json}...")
+    try:
+        matrix.to_json(args.json)
+        print("Матрица успешно сохранена с актуальными путями к файлам.")
+    except Exception as e:
+        print(f"[ERROR] Ошибка при сохранении матрицы: {e}")
+
+    return 0
 
 
 if __name__ == "__main__":

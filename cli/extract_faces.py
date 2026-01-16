@@ -52,7 +52,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Detect and save faces from images with consolidated coordinates')
     parser.add_argument('-s', '--source', required=True, help='Path to image directory')
     parser.add_argument('-o', '--output', default='faces', help='Output directory')
-    parser.add_argument('-p', '--padding', type=float, default=0.3,
+    parser.add_argument('-p', '--padding', type=float, default=1.2,
                         help='Padding ratio around face (e.g., 0.2 for 20%%)')
     args = parser.parse_args()
 
