@@ -5,10 +5,11 @@
 ffmpeg -i *.mp4 frame_%05d.png
 
 # Вырезаем все лица из кадров
+python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.5
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.7
 
 # Копирование уникальных
-python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.75
+python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.95
 
 # Группируем лица по схожести
 python /Users/user/PycharmProjects/FaceTools/cli/make_matrix.py -s ./unique_faces  -o matrix
@@ -36,4 +37,5 @@ python /Users/user/PycharmProjects/FaceTools/cli/collage.py -s /Users/user/Downl
    - Сохранение результатов в указанную директорию
 
 # sam3
-python /Users/user/PycharmProjects/FaceTools/cli/crop_head_square.py /Users/user/Downloads/5e0be7afa016ea69e9be6e5815dfe28b.jpg --pad 70
+python /Users/user/PycharmProjects/FaceTools/cli/crop_face_square.py '/Users/user/Downloads/_person_Alexandra Agoston/unique_faces/f01ce2251edb6bf616cd04cb8a93cb60_face_1.jpg'
+find . -type f -name "*.jpg" -exec python /Users/user/PycharmProjects/FaceTools/cli/crop_face_square.py {} --debug \;

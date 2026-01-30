@@ -14,6 +14,7 @@ sys.path.insert(0, project_root)
 # pylint: disable=import-error,wrong-import-position
 from src.infrastructure.file.image_loader import ImageLoader
 from src.infrastructure.detection.yolo_detector import YOLOFaceDetector
+from src.infrastructure.detection.sam3_detector import SAMFaceDetector
 from src.utils.image_utils import SquareCropCalculator
 # pylint: enable=import-error,wrong-import-position
 
