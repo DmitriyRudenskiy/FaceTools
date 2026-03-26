@@ -1,7 +1,7 @@
 import argparse
 import logging
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -19,9 +19,12 @@ class Settings:
     model_path: str = "models/sam3.pt"
     prompt: str = "person"
     pad_percent: float = 0.0
-    background_color: Tuple[int, int, int] = (255, 255, 255)  # Белый цвет
+    background_color: Tuple[int, int, int] = (255, 255,
+                                              255)  # Белый цвет (используется, если transparent_background=False)
     jpeg_quality: int = 95
     device: str = "auto"
+    use_mask: bool = False  # False = вырезать квадратом, True = по маске
+    transparent_background: bool = False  # Новое поле: сохранять ли прозрачный фон (PNG)
 
 
 # --- Геометрия ---
@@ -41,10 +44,6 @@ class BBox:
     @property
     def height(self) -> int:
         return self.ymax - self.ymin
-
-    @property
-    def center(self) -> Tuple[int, int]:
-        return ((self.xmin + self.xmax) // 2, (self.ymin + self.ymax) // 2)
 
     def to_tuple(self) -> Tuple[int, int, int, int]:
         return (self.xmin, self.ymin, self.xmax, self.ymax)
@@ -67,7 +66,7 @@ def get_mask_bbox(mask: np.ndarray) -> Optional[BBox]:
 # --- Модель ---
 
 class SegmentationModel:
-    """Обертка для SAM3 модели."""
+    """Обертка для SAM3 модели. Инициализируется один раз."""
 
     def __init__(self, checkpoint_path: str, device_str: str = "auto"):
         self.device = self._resolve_device(device_str)
@@ -128,7 +127,7 @@ def create_debug_image(
         masks: List[np.ndarray],
         bboxes: List[BBox]
 ) -> Image.Image:
-    """Создает отладочное изображение с визуализацией всех масок."""
+    """Создает отладочное изображение."""
     debug_img = image.copy().convert("RGBA")
     colors = [(255, 0, 0, 80), (0, 255, 0, 80), (0, 0, 255, 80)]
 
@@ -151,69 +150,86 @@ def crop_person_to_square(
         settings: Settings
 ) -> Optional[Image.Image]:
     """
-    1. Вырезает прямоугольник с человеком (используя BBox маски).
-    2. Создает квадрат размером с большую сторону прямоугольника.
-    3. Вставляет прямоугольник в центр квадрата (без вырезания по маске).
+    Вырезает объект и вписывает его в квадрат.
+    Поддерживает режимы:
+    1. Прозрачный фон (PNG) - если settings.transparent_background = True.
+    2. Заливка цветом (JPG) - если settings.transparent_background = False.
     """
     mask_bbox = get_mask_bbox(mask)
     if mask_bbox is None:
         return None
 
-    # 1. Определяем координаты прямоугольника с учетом отступов
-    # Добавляем отступы (padding) к координатам
+    # 1. Определяем координаты прямоугольника с учетом отступов (padding)
     pad_w = int(mask_bbox.width * settings.pad_percent / 100.0)
     pad_h = int(mask_bbox.height * settings.pad_percent / 100.0)
 
+    # Расширяем границы
     xmin = mask_bbox.xmin - pad_w
     ymin = mask_bbox.ymin - pad_h
     xmax = mask_bbox.xmax + pad_w
     ymax = mask_bbox.ymax + pad_h
 
-    # 2. Вычисляем размер будущего квадрата (по большей стороне прямоугольника)
+    # Размеры расширенного прямоугольника
     rect_w = xmax - xmin
     rect_h = ymax - ymin
+
+    # 2. Размер итогового квадрата (по большей стороне прямоугольника)
     square_size = max(rect_w, rect_h)
 
-    # 3. Создаем белый квадрат
-    result = Image.new("RGB", (square_size, square_size), settings.background_color)
+    # 3. Создаем квадрат фона
+    # Выбираем режим (RGBA для прозрачности, RGB для цвета) и цвет фона
+    if settings.transparent_background:
+        mode = "RGBA"
+        bg_color = (0, 0, 0, 0)  # Полностью прозрачный
+    else:
+        mode = "RGB"
+        bg_color = settings.background_color
 
-    # 4. Вычисляем область для вырезания из исходного изображения
-    # Важно: координаты могут выходить за пределы изображения,
-    # поэтому вырезаем только пересечение с оригиналом
+    result = Image.new(mode, (square_size, square_size), bg_color)
+
+    # 4. Вырезаем валидную часть из исходного изображения
     img_w, img_h = image.size
 
-    # Область, которую хотим вырезать (может выходить за границы)
     src_xmin = max(0, xmin)
     src_ymin = max(0, ymin)
     src_xmax = min(img_w, xmax)
     src_ymax = min(img_h, ymax)
 
-    # Если после отсечения область пустая
     if src_xmin >= src_xmax or src_ymin >= src_ymax:
         return result
 
-    # Вырезаем кусок из оригинала
-    cropped_rect = image.crop((src_xmin, src_ymin, src_xmax, src_ymax))
-
-    # 5. Вычисляем, куда вклеить этот кусок на белом квадрате
-    # Центрируем прямоугольник в квадрате.
-    # Сначала находим центр квадрата
+    # Координаты для вставки
     center_x = square_size // 2
     center_y = square_size // 2
+    ideal_center_x = (xmin + xmax) // 2
+    ideal_center_y = (ymin + ymax) // 2
 
-    # Смещение относительно центра, чтобы понять левый верхний угол
-    paste_x = center_x - (rect_w // 2)
-    paste_y = center_y - (rect_h // 2)
+    paste_x = center_x - (ideal_center_x - src_xmin)
+    paste_y = center_y - (ideal_center_y - src_ymin)
 
-    # Корректируем смещение, если исходный прямоугольник выходил за границы изображения
-    # Например, если xmin был < 0, то при вырезании мы потеряли левую пустую часть.
-    # Значит вставлять нужно правее на эту разницу.
-    paste_x += (src_xmin - xmin)
-    paste_y += (src_ymin - ymin)
+    # Вырезаем кусок оригинала
+    cropped_rect = image.crop((src_xmin, src_ymin, src_xmax, src_ymax))
 
-    # 6. Вставляем вырезанный прямоугольник на белый квадрат
-    # БЕЗ использования маски (просто paste)
-    result.paste(cropped_rect, (paste_x, paste_y))
+    # Если мы работаем в режиме RGBA, но исходник был RGB, конвертируем вырезанный кусок
+    if mode == "RGBA" and cropped_rect.mode != "RGBA":
+        cropped_rect = cropped_rect.convert("RGBA")
+
+    # Логика вставки
+    if settings.use_mask:
+        # --- Режим вырезания по МАСКЕ ---
+        # Вырезаем часть маски
+        mask_crop = mask[src_ymin:src_ymax, src_xmin:src_xmax]
+        mask_pil = Image.fromarray((mask_crop * 255).astype(np.uint8), mode='L')
+
+        # Вставляем с маской.
+        # Для RGB: маска определит, где фон, а где картинка.
+        # Для RGBA: маска определит прозрачность (альфа-канал).
+        result.paste(cropped_rect, (paste_x, paste_y), mask_pil)
+    else:
+        # --- Режим вырезания по КВАДРАТУ ---
+        # Просто вставляем вырезанный прямоугольник.
+        # Если результат RGBA, области вне картинки останутся прозрачными.
+        result.paste(cropped_rect, (paste_x, paste_y))
 
     return result
 
@@ -228,43 +244,72 @@ class PersonCropper:
         self.logger = logging.getLogger(__name__)
         self.model = SegmentationModel(settings.model_path, settings.device)
 
-    def process(self, image_path: str, save_debug: bool = False) -> int:
+    def process_image(self, image_path: str, save_debug: bool = False) -> int:
+        """Обрабатывает одно изображение, возвращает количество найденных людей."""
         try:
-            self.logger.info(f"Обработка изображения: {image_path}")
+            self.logger.info(f"Обработка файла: {image_path}")
 
+            # Загружаем изображение
             image = Image.open(image_path)
+
+            # Если входное изображение имеет палитру или транспарентность, конвертируем в RGB для корректной работы модели
+            # Но сохраняем оригинал для вырезания, если нужен прозрачный фон
             if image.mode != 'RGB':
-                image = image.convert('RGB')
+                # Создаем копию для модели
+                image_for_model = image.convert('RGB')
+            else:
+                image_for_model = image
+
+            # Если нужен прозрачный фон, лучше работать с RGBA версией исходника
+            if self.settings.transparent_background and image.mode != 'RGBA':
+                # Конвертируем исходник в RGBA, если он еще нет (например, JPG)
+                image = image.convert('RGBA')
 
             masks = self.model.predict_masks(image_path, self.settings.prompt)
 
             if not masks:
-                self.logger.warning(f"Люди не найдены на изображении: {image_path}")
+                self.logger.warning(f"Люди не найдены: {image_path}")
                 return 0
 
             self.logger.info(f"Найдено объектов: {len(masks)}")
 
             bboxes_for_debug = []
             saved_count = 0
+            last_output_dir = None
 
             for i, mask in enumerate(masks):
+                # Передаем исходное изображение (возможно RGBA)
                 result_image = crop_person_to_square(image, mask, self.settings)
 
                 if result_image:
-                    output_path = self._get_output_path(image_path, i if len(masks) > 1 else -1)
+                    # Определяем формат и расширение
+                    if self.settings.transparent_background:
+                        fmt = "PNG"
+                        ext = ".png"
+                    else:
+                        fmt = "JPEG"
+                        ext = ".jpg"
+
+                    output_path = self._get_output_path(image_path, i if len(masks) > 1 else -1, ext)
                     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-                    result_image.save(
-                        str(output_path),
-                        format="JPEG",
-                        quality=self.settings.jpeg_quality,
-                        subsampling=0
-                    )
+                    # Сохраняем
+                    save_kwargs = {}
+                    if fmt == "JPEG":
+                        save_kwargs['quality'] = self.settings.jpeg_quality
+                        save_kwargs['subsampling'] = 0
+                    # Для PNG качество обычно не настраивается через quality, можно добавить compress_level, но default ок.
+
+                    result_image.save(str(output_path), format=fmt, **save_kwargs)
+
                     saved_count += 1
+                    last_output_dir = output_path.parent
                     bboxes_for_debug.append(get_mask_bbox(mask))
 
-            if save_debug and bboxes_for_debug:
-                self._save_debug(image, masks, bboxes_for_debug, output_path.parent / f"debug_{Path(image_path).name}")
+            if save_debug and bboxes_for_debug and last_output_dir:
+                # Для дебага всегда используем RGB
+                self._save_debug(image_for_model, masks, bboxes_for_debug,
+                                 last_output_dir / f"debug_{Path(image_path).name}")
 
             return saved_count
 
@@ -277,15 +322,19 @@ class PersonCropper:
         debug_img.save(output_path)
 
     @staticmethod
-    def _get_output_path(input_path: str, index: int = -1) -> Path:
+    def _get_output_path(input_path: str, index: int = -1, ext: str = ".jpg") -> Path:
         input_p = Path(input_path)
         suffix = f"_{index}" if index >= 0 else ""
-        return input_p.parent / f"{input_p.stem}_person{suffix}.jpg"
+        return input_p.parent / f"{input_p.stem}_person{suffix}{ext}"
 
 
 # --- Точка входа ---
 
 def get_image_paths(input_path: str) -> List[str]:
+    """
+    Возвращает список путей к изображениям.
+    Если папка — сканирует рекурсивно (rglob).
+    """
     path_obj = Path(input_path)
     extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'}
 
@@ -305,11 +354,24 @@ def get_image_paths(input_path: str) -> List[str]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Вырезание людей и вписывание их в квадрат с белым фоном."
+        description="Вырезание людей и вписывание их в квадрат. Поддержка прозрачного фона (PNG)."
     )
     parser.add_argument("input_path", type=str, help="Путь к изображению или папке")
     parser.add_argument("--debug", action="store_true", help="Сохранить дебаг изображение")
     parser.add_argument("--verbose", action="store_true", help="Подробное логирование")
+
+    parser.add_argument(
+        "--mask",
+        action="store_true",
+        help="Вырезать по точной маске (удалить фон). По умолчанию вырезается прямоугольник."
+    )
+
+    # Новый аргумент
+    parser.add_argument(
+        "--transparent",
+        action="store_true",
+        help="Сохранить результат в PNG с прозрачным фоном. Работает автоматически с --mask."
+    )
 
     args = parser.parse_args()
 
@@ -319,6 +381,7 @@ def main():
     )
     logger = logging.getLogger(__name__)
 
+    # 1. Определение путей
     script_dir = Path(__file__).parent.resolve()
     model_path = script_dir.parent / "models" / "sam3.pt"
 
@@ -326,28 +389,34 @@ def main():
         logger.error(f"Файл модели не найден: {model_path}")
         sys.exit(1)
 
+    # 2. Поиск изображений
     image_paths = get_image_paths(args.input_path)
 
     if not image_paths:
         logger.error("Изображения для обработки не найдены.")
-        sys.exit(1)
+        sys.exit(0)
 
     logger.info(f"Найдено изображений: {len(image_paths)}")
 
+    # 3. Инициализация
     try:
-        settings = Settings(model_path=str(model_path))
+        settings = Settings(
+            model_path=str(model_path),
+            use_mask=args.mask,
+            transparent_background=args.transparent
+        )
         cropper = PersonCropper(settings)
-
-        total_processed = 0
-        for img_path in image_paths:
-            count = cropper.process(img_path, args.debug)
-            total_processed += count
-
-        logger.info(f"Обработка завершена. Всего вырезано людей: {total_processed}")
-
     except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
+        logger.error(f"Не удалось инициализировать модель: {e}")
         sys.exit(1)
+
+    # 4. Цикл обработки
+    total_processed = 0
+    for img_path in image_paths:
+        count = cropper.process_image(img_path, args.debug)
+        total_processed += count
+
+    logger.info(f"Обработка завершена. Всего вырезано людей: {total_processed}")
 
 
 if __name__ == "__main__":

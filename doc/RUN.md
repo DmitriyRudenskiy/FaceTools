@@ -5,12 +5,17 @@
 ffmpeg -i *.mp4 frame_%05d.png
 ffmpeg -i *.cmfv frame_%05d.png
 
+python /Users/user/PycharmProjects/FaceTools/cli/crop_people.py ./unique_photos
+
 # Вырезаем все лица из кадров
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.5
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.7
 
 # Копирование уникальных
-python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.85
+python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.9
+python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  . ./unique_faces --threshold 0.9
+
+'/Users/user/Downloads/Новая папка с объектами 28/'
 
 # Группируем лица по схожести
 python /Users/user/PycharmProjects/FaceTools/cli/make_matrix.py -s ./unique_faces  -o matrix
@@ -40,3 +45,7 @@ python /Users/user/PycharmProjects/FaceTools/cli/collage.py -s /Users/user/Downl
 # sam3
 python /Users/user/PycharmProjects/FaceTools/cli/crop_face_square.py '/Users/user/Downloads/_person_Alexandra Agoston/unique_faces/347eef357ace9f772781895fde9307f8_face_1.jpg'
 find . -type f -name "*.jpg" -exec python /Users/user/PycharmProjects/FaceTools/cli/crop_face_square.py {} --debug \;
+
+
+# Grid
+python /Users/user/PycharmProjects/FaceTools/cli/split_3x3_image.py .
