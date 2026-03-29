@@ -19,8 +19,7 @@ class Settings:
     model_path: str = "models/sam3.pt"
     prompt: str = "person"
     pad_percent: float = 0.0
-    background_color: Tuple[int, int, int] = (255, 255,
-                                              255)  # Белый цвет (используется, если transparent_background=False)
+    background_color: Tuple[int, int, int] = (247, 247, 247)
     jpeg_quality: int = 95
     device: str = "auto"
     use_mask: bool = False  # False = вырезать квадратом, True = по маске
