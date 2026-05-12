@@ -8,11 +8,11 @@ ffmpeg -i *.cmfv frame_%05d.png
 python /Users/user/PycharmProjects/FaceTools/cli/crop_people.py ./unique_photos
 
 # Вырезаем все лица из кадров
-python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.5
+python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=2
 python /Users/user/PycharmProjects/FaceTools/cli/extract_faces.py -s . --padding=0.7
 
 # Копирование уникальных
-python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  ./faces  ./unique_faces --threshold 0.9
+python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  .  ./unique_faces --threshold 0.95
 python /Users/user/PycharmProjects/FaceTools/cli/arcface_uniqueness.py  . ./unique_faces --threshold 0.9
 
 '/Users/user/Downloads/Новая папка с объектами 28/'

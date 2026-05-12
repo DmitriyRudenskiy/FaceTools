@@ -18,6 +18,8 @@ class Settings:
     """Настройки приложения."""
     model_path: str = "models/sam3.pt"
     prompt: str = "person"
+    # Список промптов для авто-детекции, если основной не сработал
+    fallback_prompts: List[str] = field(default_factory=lambda: ["object", "thing", "item", "woman", "people", "character"])
     pad_percent: float = 0.0
     background_color: Tuple[int, int, int] = (247, 247, 247)
     jpeg_quality: int = 95
@@ -99,7 +101,7 @@ class SegmentationModel:
             raise RuntimeError(f"Ошибка загрузки модели: {e}")
 
     def predict_masks(self, image_path: str, prompt: str) -> List[np.ndarray]:
-        """Предсказывает маски для всех найденных объектов."""
+        """Предсказывает маски для всех найденных объектов по текстовому промпту."""
         try:
             self.predictor.set_image(image_path)
             results = self.predictor(text=[prompt])
@@ -138,7 +140,7 @@ def create_debug_image(
 
         draw = ImageDraw.Draw(debug_img)
         draw.rectangle(bbox.to_tuple(), outline="red", width=2)
-        draw.text((bbox.xmin, bbox.ymin - 10), f"Person {i + 1}", fill="red")
+        draw.text((bbox.xmin, bbox.ymin - 10), f"Object {i + 1}", fill="red")
 
     return debug_img.convert("RGB")
 
@@ -244,40 +246,49 @@ class PersonCropper:
         self.model = SegmentationModel(settings.model_path, settings.device)
 
     def process_image(self, image_path: str, save_debug: bool = False) -> int:
-        """Обрабатывает одно изображение, возвращает количество найденных людей."""
+        """Обрабатывает одно изображение, возвращает количество найденных объектов."""
         try:
             self.logger.info(f"Обработка файла: {image_path}")
 
             # Загружаем изображение
             image = Image.open(image_path)
 
-            # Если входное изображение имеет палитру или транспарентность, конвертируем в RGB для корректной работы модели
-            # Но сохраняем оригинал для вырезания, если нужен прозрачный фон
+            # Подготовка изображений для модели и для сохранения
             if image.mode != 'RGB':
-                # Создаем копию для модели
                 image_for_model = image.convert('RGB')
             else:
                 image_for_model = image
 
-            # Если нужен прозрачный фон, лучше работать с RGBA версией исходника
             if self.settings.transparent_background and image.mode != 'RGBA':
-                # Конвертируем исходник в RGBA, если он еще нет (например, JPG)
                 image = image.convert('RGBA')
 
+            # 1. Попытка найти по основному промпту (Person)
             masks = self.model.predict_masks(image_path, self.settings.prompt)
+            detection_source = f"prompt '{self.settings.prompt}'"
 
+            # 2. Если не нашли - Fallback (Авто-детекция)
             if not masks:
-                self.logger.warning(f"Люди не найдены: {image_path}")
+                self.logger.info(f"Объект '{self.settings.prompt}' не найден. Запуск авто-детекции...")
+
+                for fb_prompt in self.settings.fallback_prompts:
+                    masks = self.model.predict_masks(image_path, fb_prompt)
+                    if masks:
+                        detection_source = f"fallback prompt '{fb_prompt}'"
+                        self.logger.info(f"Объекты найдены через авто-детекцию ({fb_prompt}).")
+                        break  # Прерываем цикл, как только нашли что-то
+
+            # 3. Если все еще пусто - выходим
+            if not masks:
+                self.logger.warning(f"Объекты не найдены ни основным, ни запасными методами: {image_path}")
                 return 0
 
-            self.logger.info(f"Найдено объектов: {len(masks)}")
+            self.logger.info(f"Найдено объектов ({detection_source}): {len(masks)}")
 
             bboxes_for_debug = []
             saved_count = 0
             last_output_dir = None
 
             for i, mask in enumerate(masks):
-                # Передаем исходное изображение (возможно RGBA)
                 result_image = crop_person_to_square(image, mask, self.settings)
 
                 if result_image:
@@ -297,7 +308,6 @@ class PersonCropper:
                     if fmt == "JPEG":
                         save_kwargs['quality'] = self.settings.jpeg_quality
                         save_kwargs['subsampling'] = 0
-                    # Для PNG качество обычно не настраивается через quality, можно добавить compress_level, но default ок.
 
                     result_image.save(str(output_path), format=fmt, **save_kwargs)
 
@@ -306,7 +316,6 @@ class PersonCropper:
                     bboxes_for_debug.append(get_mask_bbox(mask))
 
             if save_debug and bboxes_for_debug and last_output_dir:
-                # Для дебага всегда используем RGB
                 self._save_debug(image_for_model, masks, bboxes_for_debug,
                                  last_output_dir / f"debug_{Path(image_path).name}")
 
@@ -353,7 +362,7 @@ def get_image_paths(input_path: str) -> List[str]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Вырезание людей и вписывание их в квадрат. Поддержка прозрачного фона (PNG)."
+        description="Вырезание объектов (по умолчанию людей) и вписывание их в квадрат. Поддержка авто-детекции."
     )
     parser.add_argument("input_path", type=str, help="Путь к изображению или папке")
     parser.add_argument("--debug", action="store_true", help="Сохранить дебаг изображение")
@@ -365,7 +374,6 @@ def main():
         help="Вырезать по точной маске (удалить фон). По умолчанию вырезается прямоугольник."
     )
 
-    # Новый аргумент
     parser.add_argument(
         "--transparent",
         action="store_true",
@@ -415,7 +423,7 @@ def main():
         count = cropper.process_image(img_path, args.debug)
         total_processed += count
 
-    logger.info(f"Обработка завершена. Всего вырезано людей: {total_processed}")
+    logger.info(f"Обработка завершена. Всего вырезано объектов: {total_processed}")
 
 
 if __name__ == "__main__":
